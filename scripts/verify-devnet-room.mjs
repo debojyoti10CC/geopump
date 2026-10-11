@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import {readFile,writeFile,unlink} from 'node:fs/promises';
 import nacl from 'tweetnacl';
-import {Connection,Keypair,SystemProgram,Transaction,sendAndConfirmTransaction} from '@solana/web3.js';
+import {Connection,Keypair,SystemProgram,Transaction} from '@solana/web3.js';
 
 const base=process.env.GEO_TEST_ORIGIN||'http://127.0.0.1:4173';
-const connection=new Connection('https://api.devnet.solana.com','confirmed');
+let connection=new Connection('https://api.devnet.solana.com','confirmed');
 const referee=Keypair.fromSecretKey(Uint8Array.from(JSON.parse(await readFile('.secrets/referee.json','utf8'))));
 const creator=Keypair.generate(),joiner=Keypair.generate();
 // Keep failed runs recoverable without ever logging the generated signing keys.
@@ -12,6 +12,22 @@ const recoveryFile=`.secrets/verification-wallets-${Date.now()}.json`;
 await writeFile(recoveryFile,JSON.stringify({origin:base,creator:[...creator.secretKey],joiner:[...joiner.secretKey]}));
 const cookies=new Map(),receipts=[];
 const sign=(key,message)=>Buffer.from(nacl.sign.detached(new TextEncoder().encode(message),key.secretKey)).toString('base64');
+async function confirmed(signature){
+  for(let attempt=0;attempt<40;attempt++){
+    const status=(await connection.getSignatureStatuses([signature],{searchTransactionHistory:true})).value[0];
+    assert.equal(status?.err??null,null,'Transaction must execute successfully');
+    if(status?.confirmationStatus==='confirmed'||status?.confirmationStatus==='finalized')return;
+    await new Promise(resolve=>setTimeout(resolve,750));
+  }
+  throw Error(`Transaction was not confirmed: ${signature}`);
+}
+async function sendTestTransaction(transaction,key){
+  transaction.feePayer=key.publicKey;
+  transaction.recentBlockhash=(await connection.getLatestBlockhash('confirmed')).blockhash;
+  transaction.sign(key);
+  const signature=await connection.sendRawTransaction(transaction.serialize());
+  await confirmed(signature);return signature;
+}
 async function call(key,path,body){
   const response=await fetch(`${base}${path}`,{method:body?'POST':'GET',headers:{...(body?{'content-type':'application/json',origin:new URL(base).origin}:{}),cookie:cookies.get(key.publicKey.toBase58())||''},body:body?JSON.stringify(body):undefined});
   const set=response.headers.get('set-cookie');if(set)cookies.set(key.publicKey.toBase58(),set.split(';')[0]);
@@ -19,13 +35,15 @@ async function call(key,path,body){
 }
 async function deposit(key,data){
   const tx=Transaction.from(Buffer.from(data.transaction,'base64'));tx.partialSign(key);
-  const signature=await connection.sendRawTransaction(tx.serialize());await connection.confirmTransaction(signature,'confirmed');
+  const signature=await connection.sendRawTransaction(tx.serialize());await confirmed(signature);
   receipts.push({action:key===creator?'create':'join',signature});
   return (await call(key,`/api/rooms/${data.room.code}/confirm`,{wallet:key.publicKey.toBase58(),signature,authMessage:data.auth.message,authSignature:sign(key,data.auth.message)})).room;
 }
 assert.equal((await connection.getGenesisHash()),'EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG');
 const config=await call(creator,'/api/config');assert.equal(config.escrowReady,true,'Escrow must be deployed and referee funded');
-const funding=await sendAndConfirmTransaction(connection,new Transaction().add(SystemProgram.transfer({fromPubkey:referee.publicKey,toPubkey:creator.publicKey,lamports:8000000}),SystemProgram.transfer({fromPubkey:referee.publicKey,toPubkey:joiner.publicKey,lamports:2000000})),[referee]);
+connection=new Connection(config.rpcUrl,'confirmed');
+assert.equal((await connection.getGenesisHash()),'EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG');
+const funding=await sendTestTransaction(new Transaction().add(SystemProgram.transfer({fromPubkey:referee.publicKey,toPubkey:creator.publicKey,lamports:8000000}),SystemProgram.transfer({fromPubkey:referee.publicKey,toPubkey:joiner.publicKey,lamports:2000000})),referee);
 receipts.push({action:'test-wallet-funding',signature:funding});
 const stake='1000001';
 let room=await deposit(creator,await call(creator,'/api/rooms',{wallet:creator.publicKey.toBase58(),stakeLamports:stake}));
@@ -54,6 +72,6 @@ const payout=await connection.getSignatureStatuses([room.result.signature]);asse
 receipts.push({action:'payout',signature:room.result.signature});
 await writeFile('chain/devnet-game-receipt.json',JSON.stringify({origin:base,network:'devnet',programId:config.programId,roomCode:room.code,stakeLamports:stake,potLamports:(BigInt(stake)*2n).toString(),creator:creator.publicKey.toBase58(),joiner:joiner.publicKey.toBase58(),winner:room.result.winnerWallet,actualPayoutLamports:expected.map(String),signedGuesses:2,targetHiddenDuringRound:true,authenticatedPanoramaVerified:true,anonymousPanoramaRejected:true,confirmedPayout:true,receipts,checkedAt:new Date().toISOString()},null,2));
 // Return unused test balances; escrow rent remains with its payer until close becomes eligible.
-for(const key of[creator,joiner]){const remaining=await connection.getBalance(key.publicKey);if(remaining>5000)await sendAndConfirmTransaction(connection,new Transaction().add(SystemProgram.transfer({fromPubkey:key.publicKey,toPubkey:referee.publicKey,lamports:remaining-5000})),[key]);}
+for(const key of[creator,joiner]){const remaining=await connection.getBalance(key.publicKey);if(remaining>5000)await sendTestTransaction(new Transaction().add(SystemProgram.transfer({fromPubkey:key.publicKey,toPubkey:referee.publicKey,lamports:remaining-5000})),key);}
 await unlink(recoveryFile);
 console.log(`Confirmed devnet duel: two deposits, two signed guesses, exact ${Number(stake)*2} lamport pot and payout ${room.result.signature}`);

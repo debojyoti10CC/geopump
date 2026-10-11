@@ -8,7 +8,7 @@ import type { RoomRecord } from "./game-store";
 import type { calculateResult } from "./game-math";
 import { findConfirmedTerminalReceipt } from "./game-receipt";
 
-type Settings = { SOLANA_PROGRAM_ID?: string; SOLANA_RPC_URL?: string; SOLANA_REFEREE_SECRET?: string };
+type Settings = { SOLANA_PROGRAM_ID?: string; SOLANA_RPC_URL?: string; SOLANA_PUBLIC_RPC_URL?: string; SOLANA_REFEREE_SECRET?: string };
 const settings = () => env as unknown as Settings;
 const bytes = (value:string) => Uint8Array.from(value.match(/.{2}/g)!,v=>parseInt(v,16));
 const asHex = (value:Uint8Array) => Array.from(value,v=>v.toString(16).padStart(2,"0")).join("");
@@ -23,7 +23,7 @@ function serverConnection(url:string) {
         const pause=1200-(Date.now()-lastRpcAt);
         if (pause>0)await new Promise(resolve=>setTimeout(resolve,pause));
         lastRpcAt=Date.now();
-        return fetch(input,init);
+        return fetch(input,{...init,signal:AbortSignal.timeout(8_000)});
       });
       rpcQueue=request;
       return request;
@@ -73,8 +73,8 @@ export async function escrowConfiguration() {
     }
   }
   else console.warn("Escrow configuration incomplete",JSON.stringify({programConfigured:!!config.SOLANA_PROGRAM_ID,refereeConfigured:!!config.SOLANA_REFEREE_SECRET}));
-  // Public wallets use the public devnet endpoint; server provider credentials stay private.
-  return {ready,programId,refereeWallet,rpcUrl:DEVNET_RPC,commitment:(room:RoomRecord)=>asHex(commitment(room,new PublicKey(room.program_id)))};
+  // Public wallet transport is configured separately, so private provider URLs cannot leak.
+  return {ready,programId,refereeWallet,rpcUrl:config.SOLANA_PUBLIC_RPC_URL||DEVNET_RPC,commitment:(room:RoomRecord)=>asHex(commitment(room,new PublicKey(room.program_id)))};
 }
 export async function createDeposit(room:RoomRecord) {
   const {connection,programId,signer}=dependencies(room),creator=new PublicKey(room.creator_wallet);
