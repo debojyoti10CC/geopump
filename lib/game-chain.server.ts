@@ -64,6 +64,7 @@ export async function escrowConfiguration() {
         const {connection,programId:program,signer}=dependencies();
         const [[account,referee],genesis]=await Promise.all([connection.getMultipleAccountsInfo([program,signer.publicKey],"confirmed"),connection.getGenesisHash()]);
         const verified=!!account?.executable && genesis===DEVNET_GENESIS && (referee?.lamports??0)>=100_000;
+        if (!verified) console.warn("Escrow readiness verification failed",JSON.stringify({programExecutable:account?.executable??null,devnetGenesis:genesis===DEVNET_GENESIS,refereeLamports:referee?.lamports??null}));
         readiness={key,ready:verified,checkedAt:Date.now()};
         return verified;
       } catch { console.error("Escrow readiness RPC unavailable"); return readiness?.key===key && readiness.ready && Date.now()-readiness.checkedAt<300_000; }
@@ -71,6 +72,7 @@ export async function escrowConfiguration() {
       ready=await readinessCheck;
     }
   }
+  else console.warn("Escrow configuration incomplete",JSON.stringify({programConfigured:!!config.SOLANA_PROGRAM_ID,refereeConfigured:!!config.SOLANA_REFEREE_SECRET}));
   // Public wallets use the public devnet endpoint; server provider credentials stay private.
   return {ready,programId,refereeWallet,rpcUrl:DEVNET_RPC,commitment:(room:RoomRecord)=>asHex(commitment(room,new PublicKey(room.program_id)))};
 }
