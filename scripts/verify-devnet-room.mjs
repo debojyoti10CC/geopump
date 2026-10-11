@@ -10,7 +10,7 @@ const creator=Keypair.generate(),joiner=Keypair.generate();
 const cookies=new Map(),receipts=[];
 const sign=(key,message)=>Buffer.from(nacl.sign.detached(new TextEncoder().encode(message),key.secretKey)).toString('base64');
 async function call(key,path,body){
-  const response=await fetch(`${base}${path}`,{method:body?'POST':'GET',headers:{...(body?{'content-type':'application/json'}:{}),cookie:cookies.get(key.publicKey.toBase58())||''},body:body?JSON.stringify(body):undefined});
+  const response=await fetch(`${base}${path}`,{method:body?'POST':'GET',headers:{...(body?{'content-type':'application/json',origin:new URL(base).origin}:{}),cookie:cookies.get(key.publicKey.toBase58())||''},body:body?JSON.stringify(body):undefined});
   const set=response.headers.get('set-cookie');if(set)cookies.set(key.publicKey.toBase58(),set.split(';')[0]);
   const data=await response.json();assert.equal(response.ok,true,JSON.stringify(data));return data;
 }
@@ -30,6 +30,10 @@ console.log(`Created real devnet room ${room.code}`);
 room=await deposit(joiner,await call(joiner,`/api/rooms/${room.code}/join`,{wallet:joiner.publicKey.toBase58()}));
 for(let n=0;room.status!=='active'&&n<15;n++){await new Promise(r=>setTimeout(r,1000));room=(await call(creator,`/api/rooms/${room.code}?wallet=${creator.publicKey}`)).room;}
 assert.equal(room.status,'active');assert.equal(room.result,null);
+const privateScene=await fetch(`${base}${room.sceneUrl}`,{headers:{cookie:cookies.get(creator.publicKey.toBase58())||''}});
+assert.equal(privateScene.status,200,'Authenticated panorama must work through the public host');
+assert.match(privateScene.headers.get('content-type')||'',/^image\//);
+assert.equal((await fetch(`${base}${room.sceneUrl}`)).status,403,'Panorama must remain private without the room cookie');
 const guesses=[[creator,0,0],[joiner,45123456,90123456]];
 for(const[key,latE6,lngE6]of guesses){
   const own=(await call(key,`/api/rooms/${room.code}?wallet=${key.publicKey}`)).room,c=own.challenge;
