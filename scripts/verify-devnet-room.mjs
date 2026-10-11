@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {readFile,writeFile} from 'node:fs/promises';
+import {readFile,writeFile,unlink} from 'node:fs/promises';
 import nacl from 'tweetnacl';
 import {Connection,Keypair,SystemProgram,Transaction,sendAndConfirmTransaction} from '@solana/web3.js';
 
@@ -7,6 +7,9 @@ const base=process.env.GEO_TEST_ORIGIN||'http://127.0.0.1:4173';
 const connection=new Connection('https://api.devnet.solana.com','confirmed');
 const referee=Keypair.fromSecretKey(Uint8Array.from(JSON.parse(await readFile('.secrets/referee.json','utf8'))));
 const creator=Keypair.generate(),joiner=Keypair.generate();
+// Keep failed runs recoverable without ever logging the generated signing keys.
+const recoveryFile=`.secrets/verification-wallets-${Date.now()}.json`;
+await writeFile(recoveryFile,JSON.stringify({origin:base,creator:[...creator.secretKey],joiner:[...joiner.secretKey]}));
 const cookies=new Map(),receipts=[];
 const sign=(key,message)=>Buffer.from(nacl.sign.detached(new TextEncoder().encode(message),key.secretKey)).toString('base64');
 async function call(key,path,body){
@@ -49,7 +52,8 @@ const expected=[creator,joiner].map(k=>room.result.tie?Number(stake):room.result
 assert.deepEqual(after.map((amount,i)=>amount-before[i]),expected,'Payouts must match wallet balance changes exactly');
 const payout=await connection.getSignatureStatuses([room.result.signature]);assert.equal(payout.value[0]?.err,null);
 receipts.push({action:'payout',signature:room.result.signature});
-await writeFile('chain/devnet-game-receipt.json',JSON.stringify({network:'devnet',programId:config.programId,roomCode:room.code,stakeLamports:stake,potLamports:(BigInt(stake)*2n).toString(),creator:creator.publicKey.toBase58(),joiner:joiner.publicKey.toBase58(),winner:room.result.winnerWallet,actualPayoutLamports:expected.map(String),signedGuesses:2,targetHiddenDuringRound:true,confirmedPayout:true,receipts,checkedAt:new Date().toISOString()},null,2));
+await writeFile('chain/devnet-game-receipt.json',JSON.stringify({origin:base,network:'devnet',programId:config.programId,roomCode:room.code,stakeLamports:stake,potLamports:(BigInt(stake)*2n).toString(),creator:creator.publicKey.toBase58(),joiner:joiner.publicKey.toBase58(),winner:room.result.winnerWallet,actualPayoutLamports:expected.map(String),signedGuesses:2,targetHiddenDuringRound:true,authenticatedPanoramaVerified:true,anonymousPanoramaRejected:true,confirmedPayout:true,receipts,checkedAt:new Date().toISOString()},null,2));
 // Return unused test balances; escrow rent remains with its payer until close becomes eligible.
 for(const key of[creator,joiner]){const remaining=await connection.getBalance(key.publicKey);if(remaining>5000)await sendAndConfirmTransaction(connection,new Transaction().add(SystemProgram.transfer({fromPubkey:key.publicKey,toPubkey:referee.publicKey,lamports:remaining-5000})),[key]);}
+await unlink(recoveryFile);
 console.log(`Confirmed devnet duel: two deposits, two signed guesses, exact ${Number(stake)*2} lamport pot and payout ${room.result.signature}`);

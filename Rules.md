@@ -2,6 +2,8 @@
 
 These rules describe the current devnet build. Stakes are test SOL only.
 
+Play at [geopumpp.vercel.app](https://geopumpp.vercel.app/). Its public routes proxy to the Sites Worker that maintains room state and submits payouts. The public configuration reports escrow ready; a full duel through this current public route is still undergoing final verification.
+
 ## Start a duel
 
 1. Connect a Solana wallet on devnet and create a room with a stake from **0.001 to 1 test SOL**.

@@ -55,9 +55,19 @@ export async function verifyDepositTransaction(args: { connection: Connection; r
     return true;
   });
   if (!matching) throw new Error("Transaction does not contain the expected room deposit");
-  const room = await fetchChainRoom(args.connection, args.roomId, programId);
-  if (!room || room.stakeLamports !== args.stakeLamports || (args.referee && !room.referee.equals(args.referee))) throw new Error("Confirmed room terms mismatch");
-  const participant = args.kind === "create" ? room.creator : room.joiner;
-  if (!participant.equals(args.wallet)) throw new Error("Confirmed room depositor mismatch");
-  return room;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    // A receipt can become visible before the RPC account cache catches up.
+    const room = await fetchChainRoom(args.connection, args.roomId, programId, transaction.slot);
+    if (room) {
+      if (room.stakeLamports !== args.stakeLamports) throw new Error("Confirmed room stake mismatch");
+      if (args.referee && !room.referee.equals(args.referee)) throw new Error("Confirmed room referee mismatch");
+      const participant = args.kind === "create" ? room.creator : room.joiner;
+      if (participant.equals(args.wallet)) return room;
+      const joinNotVisible = args.kind === "join" && room.state === 0 && room.joiner.equals(PublicKey.default);
+      if (!joinNotVisible) throw new Error("Confirmed room depositor mismatch");
+      if (attempt === 3) throw new Error("Confirmed room join is not yet visible");
+    } else if (attempt === 3) throw new Error("Confirmed room account is not yet available");
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  throw new Error("Confirmed room account is not yet available");
 }

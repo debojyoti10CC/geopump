@@ -77,8 +77,8 @@ export function parseRoomAccount(input: Uint8Array): ChainRoom {
     stakeLamports: view.getBigUint64(172, true), createdAt: time(180), joinDeadline: time(188), startDeadline: time(196), roundStart: time(204), guessDeadline: time(212), settleDeadline: time(220), terminalAt: time(228),
     targetCommitment: data.slice(236, 268), transcriptDigest32: data.slice(268, 300), targetLatE6: view.getInt32(300, true), targetLngE6: view.getInt32(304, true), assetDigest32: data.slice(308, 340), salt32: data.slice(340, 372) };
 }
-export async function fetchChainRoom(connection: Connection, roomId: Uint8Array, programId = PROGRAM_ID): Promise<ChainRoom | null> {
-  const account = await connection.getAccountInfo(deriveRoomPda(roomId, programId), "confirmed");
+export async function fetchChainRoom(connection: Connection, roomId: Uint8Array, programId = PROGRAM_ID, minContextSlot?: number): Promise<ChainRoom | null> {
+  const account = await connection.getAccountInfo(deriveRoomPda(roomId, programId), minContextSlot === undefined ? "confirmed" : { commitment: "confirmed", minContextSlot });
   if (!account) return null;
   if (!account.owner.equals(programId)) throw new Error("Room owner mismatch");
   const room = parseRoomAccount(account.data);

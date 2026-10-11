@@ -26,16 +26,18 @@ Last updated: 2026-10-11, Asia/Calcutta.
 ## Current delivery status
 
 - Frontend, backend/D1 API, native escrow source/client/referee, local licensed scenes, and first-pass unit/security tests exist in `outputs/geo-duels/`.
-- `node --test tests/game-service.test.mjs`: 14 passed, 0 failed; covers privacy, signatures, replay/tamper, concurrency, scoring, timeout, fail-closed escrow, receipt recovery, exact rent timing/recipient, close markers and wallet-funded recovery without an operator secret.
+- `node --test tests/game-service.test.mjs`: 15 passed, 0 failed; covers privacy, signatures, replay/tamper, concurrency, scoring, timeout, fail-closed escrow, receipt recovery, rent timing/recipient, close markers, wallet-funded recovery without an operator secret, and exact trusted proxy-origin handling.
 - Native Rust program: 7 checks pass. Client: 4 checks pass. Local validator execution: 15 confirmed transactions with exact winner/tie payouts, refunds, rent accounting, invalid commitment and replay rejection, recorded in `chain/e2e-receipts.json`.
 - Executable devnet program deployed: `9knNnYeDQh1suoAx6tmhAgtmsYQvcoguTn6CkssZArsU`, verified in `chain/deployment.json`. Referee was funded with 5 devnet SOL.
 - Full deployed API round **GYHZPJ passed** on 2026-10-11: two confirmed deposits, two signed guesses, target hidden during play, and exact **2,000,002-lamport** winner payout. Evidence: `chain/devnet-game-receipt.json` and [confirmed payout](https://explorer.solana.com/tx/CyxbQPagrYKGwCZQYoz4auQeYYYvsUCL9qqmLLPzPVckCWTb8jB43kFSiurHrsNsV28dEgrKqkcF8ZpVnoVtZ94?cluster=devnet).
-- Official RPC returned HTTP 403 from the Worker; runtime uses the verified public OnFinality devnet endpoint `https://solana-devnet.api.onfinality.io/public`. Worker HTTP confirmations and server RPC pacing were fixed; all 14 service tests passed again.
+- Official RPC returned HTTP 403; public OnFinality was subsequently rate-limited. Current server RPC is private Helius devnet via the hosting secret store. Never copy its credential or full credential-bearing URL into docs, source, browser configuration or logs. Worker confirmations use HTTP polling and paced server RPC requests.
 - Sponsor: `https://deployer.devnet.solana.com`; idle retention seven days. Sponsor holds upgrade authority `FEvT5nka9qBSXryv65P8ScjvGtfLUE7LgPu1rzuJ38h8`; registered upgrade owner is recorded separately in the deployment file. Do not present this sponsored prototype as permanently hosted or immutable.
 - Apply D1 migrations in order: `0000_geo_duels.sql`, `0001_pin_escrow_authorities.sql`, `0002_reclaim_escrow_rent.sql`.
-- Final browser/public Site checks, Sites publication and GitHub push remain pending. Deployed two-wallet API verification is complete; never infer publication from that evidence.
+- Public site: `https://geopumpp.vercel.app/`, proxying UI/API/media to `https://geo-duels-arcade.ddmpersonalworkspace.chatgpt.site`. Backend owns D1, private scene/referee/RPC configuration and the once-per-minute cron; Vercel is the public routing layer. GitHub source is published at `https://github.com/debojyoti10CC/geopump`.
+- Backend version 2 deployed successfully: `appgdep_6acb5c202ee481918da43491ab5a52e4`, environment revision 5, source `be3d4e19d3c0f5d8f57e64df94bce8f470a495b2`. Public `/api/config` reports `escrowReady: true`.
+- Earlier deployed-program two-wallet API verification is complete. Full funded verification through the current public Vercel route remains pending until its new confirmed receipt is supplied.
 - Devnet referee/scene secrets are ignored under `.secrets/`/`.dev.vars`; do not copy secret values to source or logs.
-- Owner-private Sites deployment is the default audience. Do not change site access unless the user explicitly requests it.
+- The current Vercel site and its backing Sites Worker are public. Preserve existing access and secret boundaries during later changes.
 
 ## Fairness and safety caveats
 

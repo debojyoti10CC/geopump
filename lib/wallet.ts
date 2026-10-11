@@ -42,16 +42,15 @@ export async function signText(provider: WalletProvider, message: string): Promi
   return base64(signed instanceof Uint8Array ? signed : signed.signature);
 }
 
-export async function sendDeposit(provider: WalletProvider, encoded: string, rpcUrl: string): Promise<string> {
+export async function sendDeposit(provider: WalletProvider, encoded: string, rpcUrl: string, connectionOverride?: Pick<Connection, "sendRawTransaction" | "getSignatureStatuses">): Promise<string> {
   const transaction = Transaction.from(Uint8Array.from(atob(encoded), (char) => char.charCodeAt(0)));
-  const connection = new Connection(rpcUrl, "confirmed");
+  const connection = connectionOverride ?? new Connection(rpcUrl, "confirmed");
   let signature: string;
-  if (provider.signAndSendTransaction) {
-    signature = (await provider.signAndSendTransaction(transaction)).signature;
-  } else if (provider.signTransaction) {
+  // Broadcast to the game's devnet RPC, regardless of the wallet's selected network.
+  if (provider.signTransaction) {
     const signed = await provider.signTransaction(transaction);
     signature = await connection.sendRawTransaction(signed.serialize());
-  } else throw new Error("This wallet cannot send transactions. Please use Phantom or Solflare.");
+  } else throw new Error("This wallet must support transaction signing. Please use Phantom or Solflare.");
   for (let attempt = 0; attempt < 40; attempt++) {
     const status = (await connection.getSignatureStatuses([signature])).value[0];
     if (status?.err) throw new Error("The transaction failed on Solana. Your stake was not accepted.");

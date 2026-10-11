@@ -14,7 +14,8 @@ Two friends join a code-based room, deposit equal amounts of devnet SOL, view th
 | Scene vault | A small licensed Panoramax scene catalog is AES-GCM encrypted and gzip-compressed in source. `GEO_SCENE_SECRET` decrypts it only inside the server Worker. Active room responses do not disclose target coordinates, scene labels/source links, or the opponent's guess. |
 | Escrow | `programs/geo-duels/`: native Solana program derives one escrow PDA per unique room, enforces exact equal deposits, freezes fixed deadlines and outcome, sends one atomic winner/tie/refund transfer, and prevents replay. |
 | Settlement | Dedicated devnet referee key signs start/result instructions and pays their transaction fees. The API retries safely; program timeout refunds are available to the recorded players without requiring the operator key. |
-| Hosting | Cloudflare Worker + D1 through the Codex Sites build and deployment workflow. `build/sites-worker.ts` owns the request handler and scheduled recovery sweep. |
+| Public routing | `https://geopumpp.vercel.app/` proxies the game and API routes to the published Sites Worker. Vercel supplies the public address; it does not run a separate game database or referee. |
+| Hosting | `https://geo-duels-arcade.ddmpersonalworkspace.chatgpt.site` hosts the React/Vinext game, Worker APIs, D1 and private runtime secrets. `build/sites-worker.ts` handles requests and a once-per-minute settlement/recovery/rent sweep. |
 
 ## Money and lifecycle
 
@@ -49,13 +50,13 @@ The location target is committed before play and revealed with the result, but l
 
 ## Deployment and verification
 
-The executable devnet program is `9knNnYeDQh1suoAx6tmhAgtmsYQvcoguTn6CkssZArsU`; deployment evidence is in `chain/deployment.json`. The referee has been funded with 5 test SOL. The Worker uses the verified OnFinality public devnet RPC because the official endpoint returned HTTP 403 from this environment.
+The executable devnet program is `9knNnYeDQh1suoAx6tmhAgtmsYQvcoguTn6CkssZArsU`; deployment evidence is in `chain/deployment.json`. The referee has been funded with 5 test SOL. The Worker uses a private Helius devnet RPC configuration; its credential remains a server secret and is not returned to browsers or committed.
 
 This sponsored deployment has a seven-day idle retention policy. Its sponsor holds upgrade authority `FEvT5nka9qBSXryv65P8ScjvGtfLUE7LgPu1rzuJ38h8`; the registered upgrade owner is a separate identity recorded in the deployment file. Retention and sponsor upgrades are additional devnet operational dependencies.
 
-Current evidence: 14 service tests, 7 native Rust tests, 4 client tests, and local-validator transaction checks. The deployed devnet API round **GYHZPJ passed**: two confirmed deposits, two signed guesses, a hidden target during play, and the exact **2,000,002-lamport** winner payout. `chain/devnet-game-receipt.json` records the checks and [confirmed payout](https://explorer.solana.com/tx/CyxbQPagrYKGwCZQYoz4auQeYYYvsUCL9qqmLLPzPVckCWTb8jB43kFSiurHrsNsV28dEgrKqkcF8ZpVnoVtZ94?cluster=devnet).
+Current evidence: 15 service tests, 7 native Rust tests, 4 client tests, and local-validator transaction checks. The earlier deployed-program API round **GYHZPJ passed**: two confirmed deposits, two signed guesses, a hidden target during play, and the exact **2,000,002-lamport** winner payout. `chain/devnet-game-receipt.json` records the checks and [confirmed payout](https://explorer.solana.com/tx/CyxbQPagrYKGwCZQYoz4auQeYYYvsUCL9qqmLLPzPVckCWTb8jB43kFSiurHrsNsV28dEgrKqkcF8ZpVnoVtZ94?cluster=devnet).
 
-Worker confirmations use HTTP transaction-status polling; server RPC requests are paced to the public provider's limits. The 14 service tests passed again after these integration fixes. Public Site publication and GitHub push remain separate pending delivery steps.
+The public Vercel route and Sites backend are deployed; `/api/config` reports `escrowReady: true`. Worker confirmations use HTTP polling and paced server RPC requests. The exact Vercel origin is trusted for proxy requests while other cross-origin mutations remain blocked. A full duel through the current public Vercel route is being verified; no final public-round receipt is claimed yet.
 
 ## Source map
 

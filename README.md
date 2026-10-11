@@ -4,6 +4,8 @@
 
 The game-only interface recreates Windows 95: a teal desktop, navy title bars, gray beveled windows, square controls, and a red digital countdown. Stake buttons include half, double, and maximum shortcuts. Rematches are manual. The 2:1 map supports zoom and mouse/touch dragging; connecting lines appear only after the guesses and target are revealed.
 
+**Play:** [geopumpp.vercel.app](https://geopumpp.vercel.app/). Vercel proxies the game, API and media routes to the [published Sites Worker](https://geo-duels-arcade.ddmpersonalworkspace.chatgpt.site), which owns D1, private runtime configuration and a once-per-minute settlement/recovery cron.
+
 ## Game and payouts
 
 - Native SOL stakes are 0.001–1 test SOL per player, represented internally as integer lamports.
@@ -20,9 +22,9 @@ This is an early devnet build. Its off-chain referee selects locations, accepts 
 
 The executable devnet program is [`9knNnYeDQh1suoAx6tmhAgtmsYQvcoguTn6CkssZArsU`](https://explorer.solana.com/address/9knNnYeDQh1suoAx6tmhAgtmsYQvcoguTn6CkssZArsU?cluster=devnet). `chain/deployment.json` records deployment evidence; its referee was funded with 5 test SOL.
 
-**Full deployed API round GYHZPJ passed:** two confirmed deposits, two signed guesses, the target hidden during play, and the exact **2,000,002-lamport** winner payout. `chain/devnet-game-receipt.json` records the evidence and [confirmed payout](https://explorer.solana.com/tx/CyxbQPagrYKGwCZQYoz4auQeYYYvsUCL9qqmLLPzPVckCWTb8jB43kFSiurHrsNsV28dEgrKqkcF8ZpVnoVtZ94?cluster=devnet). Worker transaction confirmations use HTTP polling, with paced server RPC requests. Public Site publication and GitHub push remain pending.
+**Earlier deployed-program API round GYHZPJ passed:** two confirmed deposits, two signed guesses, the target hidden during play, and the exact **2,000,002-lamport** winner payout. `chain/devnet-game-receipt.json` records the evidence and [confirmed payout](https://explorer.solana.com/tx/CyxbQPagrYKGwCZQYoz4auQeYYYvsUCL9qqmLLPzPVckCWTb8jB43kFSiurHrsNsV28dEgrKqkcF8ZpVnoVtZ94?cluster=devnet). Worker confirmations use HTTP polling and paced server RPC requests. The public site reports `escrowReady: true`; a full funded duel through its current Vercel route is still undergoing final verification.
 
-Current checks pass: **14 service tests, 7 native Rust tests, and 4 client tests**; the service suite passed again after integration fixes. Separate local-validator transaction evidence lives in `chain/e2e-receipts.json`.
+Current checks pass: **15 service tests, 7 native Rust tests, and 4 client tests**, including the exact trusted Vercel-origin regression. Separate local-validator transaction evidence lives in `chain/e2e-receipts.json`. Source is published at [debojyoti10CC/geopump](https://github.com/debojyoti10CC/geopump).
 
 The sponsored deployment has seven-day idle retention and sponsor-held upgrade authority (`FEvT5nka9qBSXryv65P8ScjvGtfLUE7LgPu1rzuJ38h8`). The registered upgrade owner is recorded separately in the deployment file. This temporary devnet hosting is an operational dependency.
 
@@ -48,10 +50,11 @@ Site-only values belong in the hosting provider's secret store, not the reposito
 | Variable | Purpose |
 | --- | --- |
 | `SOLANA_PROGRAM_ID` | Deployed Geo Duels escrow program address on devnet. |
-| `SOLANA_RPC_URL` | Server devnet RPC. Integrated verification uses `https://solana-devnet.api.onfinality.io/public`; the official endpoint returned HTTP 403 from the Worker. |
+| `SOLANA_RPC_URL` | Private Helius devnet RPC configuration in the server secret store. Its credential must never reach source, logs or browsers. |
 | `SOLANA_REFEREE_SECRET` | Secret key for the dedicated devnet settlement/refund referee. Store as a secret. |
 | `GEO_SCENE_SECRET` | 32-byte hex AES key for the encrypted real-location catalog. Store as a secret. |
 | `GEO_OPERATOR_TOKEN` | Optional secret to restrict an operator-triggered room sweep. |
+| `GEO_PUBLIC_ORIGIN` | Exact trusted public proxy origin: `https://geopumpp.vercel.app`. Other cross-origin mutations remain blocked. |
 
 For local Worker runs, put the secret values in an ignored `.dev.vars` file. `scripts/encrypt-scenes.mjs` can encrypt a local scene catalog into `lib/scene-data.server.enc.json`; keep `.secrets/scene.key` private and set its hex value as `GEO_SCENE_SECRET`. Never commit private keys or that key file.
 
