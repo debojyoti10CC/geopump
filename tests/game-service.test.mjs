@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { Miniflare } from "miniflare";
 import { build } from "esbuild";
-import { Keypair } from "@solana/web3.js";
+import { Keypair, Transaction } from "@solana/web3.js";
 import nacl from "tweetnacl";
 import bs58 from "bs58";
 import { GameStore } from "../lib/game-store.ts";
@@ -17,7 +17,20 @@ let mf,db,store;
 before(async()=>{
   const bundled=await build({
     stdin:{contents:`import * as game from './lib/game-server';
+import { reclaimEscrowRent as realRentReclaim, recoveryTransaction as realRecoveryTransaction } from './lib/game-chain.server.ts';
+import { PublicKey } from '@solana/web3.js';
 export default {async fetch(request){let url=new URL(request.url),p=url.pathname.split('/').filter(Boolean);return game.api(async()=>{
+if(p[1]==='test' && p[2]==='rent'){
+ const data=await request.json();let calls=0,instruction=null;
+ const result=await realRentReclaim({room_id:'2'.repeat(64),program_id:data.programId,terminal_at:null},{now:data.now,read:async()=>data.missing?null:{state:data.state,terminalAt:data.terminalAt,rentPayer:new PublicKey(data.recordedPayer)},send:async ix=>{calls++;instruction={programId:ix.programId.toBase58(),data:[...ix.data],accounts:ix.keys.map(key=>key.pubkey.toBase58())};return 'rent-close-receipt';},isClosed:async()=>true});
+ return game.response({...result,calls,instruction});
+}
+if(p[1]==='test' && p[2]==='sweep')return game.response(await game.sweepRooms());
+if(p[1]==='test' && p[2]==='recovery'){
+ const data=await request.json();
+ const transaction=await realRecoveryTransaction({room_id:'2'.repeat(64),program_id:data.programId,creator_wallet:data.creator,opponent_wallet:data.opponent,opponent_confirmed:1},data.creator,false,{getLatestBlockhash:async()=>({blockhash:data.blockhash,lastValidBlockHeight:12345})});
+ return game.response({transaction});
+}
 if(p[1]==='config')return game.getConfig();
 if(p[1]==='preview-scene')return p[2]?game.previewImage():game.previewScene();
 if(p[1]==='practice')return !p[2]?game.createPractice(request):p[3]==='guess'?game.guessPractice(request,p[2]):game.getPractice(request,p[2]);
@@ -35,13 +48,15 @@ export const getSceneAsset=async()=>new Response(new Uint8Array([255,216,255,217
 export const escrowConfiguration=async()=>({ready:false,programId:'${programId}',rpcUrl:'https://api.devnet.solana.com',commitment:()=>null});
 export const createDeposit=async()=>{throw Error('No escrow')},joinDeposit=createDeposit,verifyDeposit=createDeposit,startEscrow=createDeposit,settleEscrow=createDeposit,recoveryTransaction=createDeposit,automaticRefund=createDeposit;
 export const readEscrow=async(room)=>room.last_error?.startsWith('TEST_TERMINAL_')?{state:3}:null;
-export const terminalReceipt=async(room)=>{if(room.last_error==='TEST_TERMINAL_HISTORY_UNAVAILABLE')throw Error('Historical RPC unavailable');return 'confirmed-settlement-receipt';};`,loader:"js"}));
+export const terminalReceipt=async(room)=>{if(room.last_error==='TEST_TERMINAL_HISTORY_UNAVAILABLE')throw Error('Historical RPC unavailable');return 'confirmed-settlement-receipt';};
+export const reclaimEscrowRent=async(room)=>({closed:true,signature:'rent-close-receipt',terminalAt:room.terminal_at||Date.now()-86400001});`,loader:"js"}));
     }}],
   });
   mf=new Miniflare({modules:true,script:bundled.outputFiles[0].text,compatibilityDate:"2026-05-15",compatibilityFlags:["nodejs_compat"],d1Databases:{DB:"geo-duels-service-test"},bindings:{SOLANA_PROGRAM_ID:programId}});
   db=await mf.getD1Database("DB");
   await db.exec((await readFile(new URL("../drizzle/0000_geo_duels.sql",import.meta.url),"utf8")).replaceAll(/\r?\n/g," "));
   await db.exec((await readFile(new URL("../drizzle/0001_pin_escrow_authorities.sql",import.meta.url),"utf8")).replaceAll(/\r?\n/g," "));
+  await db.exec((await readFile(new URL("../drizzle/0002_reclaim_escrow_rent.sql",import.meta.url),"utf8")).replaceAll(/\r?\n/g," "));
   store=new GameStore(db);
 });
 after(async()=>{await mf?.dispose();});
@@ -199,4 +214,42 @@ test("already settled escrow restores the displayed receipt without submitting a
     // A second poll observes the persisted terminal state; the mocked payout relay would throw if called.
     assert.equal((await call(`/api/rooms/${code}`)).data.room.result.receiptStatus,expectedSignature?"confirmed":"unavailable");
   }
+});
+
+test("rent close waits the full on-chain day and uses the recorded payer and pinned program",async()=>{
+  const recordedPayer=Keypair.generate().publicKey.toBase58(),wrongRecipient=Keypair.generate().publicKey.toBase58();
+  const pinnedProgram=Keypair.generate().publicKey.toBase58(),terminalAt=Math.floor(Date.now()/1000)-100_000;
+  const data={programId:pinnedProgram,state:3,terminalAt,recordedPayer,wrongRecipient,now:terminalAt*1000+86_400_000-1};
+  const early=await call("/api/test/rent",post(data));assert.equal(early.data.closed,false);assert.equal(early.data.calls,0);
+  const active=await call("/api/test/rent",post({...data,state:2,now:data.now+1}));assert.equal(active.data.closed,false);assert.equal(active.data.calls,0);
+  const due=await call("/api/test/rent",post({...data,now:data.now+1}));
+  assert.equal(due.data.closed,true);assert.equal(due.data.calls,1);assert.equal(due.data.signature,"rent-close-receipt");
+  assert.equal(due.data.instruction.programId,pinnedProgram);assert.deepEqual(due.data.instruction.data,[6]);
+  assert.equal(due.data.instruction.accounts[1],recordedPayer);assert.ok(!due.data.instruction.accounts.includes(wrongRecipient));
+  const missing=await call("/api/test/rent",post({...data,missing:true}));assert.equal(missing.data.closed,true);assert.equal(missing.data.calls,0);
+});
+
+test("scheduled reclamation persists one close marker and excludes early or already-closed rooms",async()=>{
+  const now=Date.now();
+  for(const [code,terminalAt] of [["WXYZ67",now-86_400_000],["BCDE89",now]]){
+    await seededRoom(code,"rent-payer");await store.patchRoom(code,{status:"finished",terminal_at:terminalAt});
+  }
+  assert.ok((await store.rentCandidates(now)).some(room=>room.code==="WXYZ67"));
+  assert.ok(!(await store.rentCandidates(now)).some(room=>room.code==="BCDE89"));
+  const tick=await call("/api/test/sweep",post({}));assert.equal(tick.response.status,200);
+  const closed=await store.room("WXYZ67");assert.equal(closed.rent_signature,"rent-close-receipt");assert.ok(closed.rent_reclaimed_at>=now);
+  assert.ok(!(await store.rentCandidates(Date.now())).some(room=>room.code==="WXYZ67"));
+  assert.equal((await store.room("BCDE89")).rent_reclaimed_at,null);
+});
+
+test("wallet-paid timeout recovery needs no operator signer or funding",async()=>{
+  const creator=Keypair.generate().publicKey.toBase58(),opponent=Keypair.generate().publicKey.toBase58(),pinnedProgram=Keypair.generate().publicKey.toBase58();
+  const recovery=await call("/api/test/recovery",post({creator,opponent,programId:pinnedProgram,blockhash:Keypair.generate().publicKey.toBase58()}));
+  assert.equal(recovery.response.status,200);
+  // The test worker intentionally has no SOLANA_REFEREE_SECRET binding.
+  const transaction=Transaction.from(Buffer.from(recovery.data.transaction,"base64"));
+  assert.equal(transaction.feePayer.toBase58(),creator);assert.equal(transaction.instructions[0].programId.toBase58(),pinnedProgram);
+  assert.deepEqual([...transaction.instructions[0].data],[5]);
+  assert.equal(transaction.instructions[0].keys[1].pubkey.toBase58(),creator);assert.equal(transaction.instructions[0].keys[2].pubkey.toBase58(),opponent);
+  assert.ok(transaction.signatures.every(entry=>entry.publicKey.toBase58()===creator));
 });

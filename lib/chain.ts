@@ -3,7 +3,7 @@ import { sha256 } from "@noble/hashes/sha256";
 import { Buffer } from "buffer";
 
 export const DEVNET_RPC = "https://api.devnet.solana.com";
-export const PROGRAM_ID = new PublicKey("9akMspt9zUEXS5Yp8NBZGNKhRgtdLMi7oMhxpC7G1BAk");
+export const PROGRAM_ID = new PublicKey("9knNnYeDQh1suoAx6tmhAgtmsYQvcoguTn6CkssZArsU");
 export const REFEREE_PUBLIC_KEY = new PublicKey("6HzMz4vsXsSko7e2y3PkL2fuEdRGkpPjSyJDyp6XcT4P");
 export const ROOM_ACCOUNT_SIZE = 372;
 export const ROUND_SECONDS = 30;

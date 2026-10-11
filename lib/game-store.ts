@@ -6,6 +6,7 @@ export interface RoomRecord {
   deadline: number | null; refund_at: number | null; location_id: string; target_lat_e6: number; target_lng_e6: number;
   asset_digest: string; salt: string; scene_token: string; result_json: string | null;
   settlement_signature: string | null; lease_until: number; last_error: string | null;
+  terminal_at: number | null; rent_reclaimed_at: number | null; rent_signature: string | null;
 }
 export interface PracticeRecord {
   id: string; token_hash: string; location_id: string; target_lat_e6: number; target_lng_e6: number;
@@ -22,7 +23,7 @@ export class GameStore {
   constructor(db: D1Database) { this.db=db; }
   room(code: string) { return this.db.prepare("SELECT * FROM rooms WHERE code = ?").bind(code).first<RoomRecord>(); }
   roomForScene(token: string) { return this.db.prepare("SELECT * FROM rooms WHERE scene_token = ?").bind(token).first<RoomRecord>(); }
-  async createRoom(room: Omit<RoomRecord, "opponent_wallet" | "creator_confirmed" | "opponent_confirmed" | "deadline" | "refund_at" | "result_json" | "settlement_signature" | "lease_until" | "last_error">) {
+  async createRoom(room: Omit<RoomRecord, "opponent_wallet" | "creator_confirmed" | "opponent_confirmed" | "deadline" | "refund_at" | "result_json" | "settlement_signature" | "lease_until" | "last_error" | "terminal_at" | "rent_reclaimed_at" | "rent_signature">) {
     await this.db.prepare("INSERT INTO rooms(code,room_id,program_id,referee_wallet,creator_wallet,stake_lamports,status,created_at,location_id,target_lat_e6,target_lng_e6,asset_digest,salt,scene_token) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
       .bind(room.code,room.room_id,room.program_id,room.referee_wallet,room.creator_wallet,room.stake_lamports,room.status,room.created_at,room.location_id,room.target_lat_e6,room.target_lng_e6,room.asset_digest,room.salt,room.scene_token).run();
   }
@@ -31,7 +32,7 @@ export class GameStore {
     return this.room(code);
   }
   async patchRoom(code: string, values: Partial<RoomRecord>) {
-    const allowed = new Set(["opponent_wallet","creator_confirmed","opponent_confirmed","deadline","refund_at","status","result_json","settlement_signature","lease_until","last_error"]);
+    const allowed = new Set(["opponent_wallet","creator_confirmed","opponent_confirmed","deadline","refund_at","status","result_json","settlement_signature","lease_until","last_error","terminal_at","rent_reclaimed_at","rent_signature"]);
     const entries = Object.entries(values);
     if (!entries.length || entries.some(([key]) => !allowed.has(key))) throw new Error("Invalid room update.");
     await this.db.prepare(`UPDATE rooms SET ${entries.map(([key]) => `${key}=?`).join(",")} WHERE code=?`).bind(...entries.map(([,value]) => value), code).run();
@@ -42,6 +43,10 @@ export class GameStore {
   }
   async pendingRooms(now: number) {
     const result = await this.db.prepare("SELECT * FROM rooms WHERE status IN ('funding','waiting','starting','active','settling','refundable') AND lease_until<? ORDER BY CASE WHEN status IN ('starting','settling') THEN 0 WHEN status='active' AND deadline<? THEN 1 ELSE 2 END,COALESCE(deadline,created_at) LIMIT 20").bind(now,now).all<RoomRecord>();
+    return result.results;
+  }
+  async rentCandidates(now: number) {
+    const result=await this.db.prepare("SELECT * FROM rooms WHERE status IN ('finished','cancelled') AND rent_reclaimed_at IS NULL AND lease_until<? AND (terminal_at IS NULL OR terminal_at<=?) ORDER BY COALESCE(terminal_at,created_at) LIMIT 20").bind(now,now-86_400_000).all<RoomRecord>();
     return result.results;
   }
   async guesses(code: string): Promise<AcceptedGuess[]> {

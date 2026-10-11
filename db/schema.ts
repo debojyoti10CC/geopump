@@ -22,9 +22,12 @@ export const rooms = sqliteTable("rooms", {
   sceneToken: text("scene_token").notNull(),
   resultJson: text("result_json"),
   settlementSignature: text("settlement_signature"),
+  terminalAt: integer("terminal_at"),
+  rentReclaimedAt: integer("rent_reclaimed_at"),
+  rentSignature: text("rent_signature"),
   leaseUntil: integer("lease_until").notNull().default(0),
   lastError: text("last_error"),
-}, (table) => [index("rooms_pending_idx").on(table.status, table.deadline), index("rooms_scene_idx").on(table.sceneToken)]);
+}, (table) => [index("rooms_pending_idx").on(table.status, table.deadline), index("rooms_scene_idx").on(table.sceneToken),index("rooms_rent_idx").on(table.status,table.rentReclaimedAt,table.terminalAt)]);
 
 export const guesses = sqliteTable("guesses", {
   roomCode: text("room_code").notNull().references(() => rooms.code),

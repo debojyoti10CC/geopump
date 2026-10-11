@@ -1,0 +1,36 @@
+{
+  "network": "devnet",
+  "programId": "9knNnYeDQh1suoAx6tmhAgtmsYQvcoguTn6CkssZArsU",
+  "roomCode": "GYHZPJ",
+  "stakeLamports": "1000001",
+  "potLamports": "2000002",
+  "creator": "F27zR2z381UFFtk32g441QcTEvjK64n58sy8fcARg3iL",
+  "joiner": "2EMhaEhLGQi1BfaCeUsfndBWBdepTjX6yAnZmjteAZUB",
+  "winner": "2EMhaEhLGQi1BfaCeUsfndBWBdepTjX6yAnZmjteAZUB",
+  "actualPayoutLamports": [
+    "0",
+    "2000002"
+  ],
+  "signedGuesses": 2,
+  "targetHiddenDuringRound": true,
+  "confirmedPayout": true,
+  "receipts": [
+    {
+      "action": "test-wallet-funding",
+      "signature": "3GBK3kdjHreL76YC9gqYC5wDpJDetgpDFhbZTxbo38nCJUVLbcnz3cLAv45nNh3hZAubPRg8okzRPYMyHy2wsHzH"
+    },
+    {
+      "action": "create",
+      "signature": "3ibC2Lhh9VdC8KKpKbnqXt23wuVJ54FucUAsarxG7vpkjvuucMeoqSgbkbBRyQgTEzcMu4636FmUG2Ri756nvsbG"
+    },
+    {
+      "action": "join",
+      "signature": "3G8Zi3cqFzFfCa74kDNydfdwzABCRJd9xzyvHCGna7Dpx495zcyxPNvqELqjCus3QRenbJPpf5CG5WCvGy17QMG"
+    },
+    {
+      "action": "payout",
+      "signature": "CyxbQPagrYKGwCZQYoz4auQeYYYvsUCL9qqmLLPzPVckCWTb8jB43kFSiurHrsNsV28dEgrKqkcF8ZpVnoVtZ94"
+    }
+  ],
+  "checkedAt": "2026-10-11T07:03:39.560Z"
+}

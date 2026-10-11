@@ -1,0 +1,20 @@
+{
+  "network": "devnet",
+  "genesis": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+  "programId": "9knNnYeDQh1suoAx6tmhAgtmsYQvcoguTn6CkssZArsU",
+  "executable": true,
+  "programDataId": "GbJqyTrVrtPyE5q85J3S3MyHg5mNtHdbfXEjU8Vg8EYU",
+  "upgradeAuthority": "FEvT5nka9qBSXryv65P8ScjvGtfLUE7LgPu1rzuJ38h8",
+  "sponsor": "https://deployer.devnet.solana.com",
+  "idleRetentionDays": 7,
+  "registeredUpgradeOwner": "DH64ZBM8LBPp4RSss6vkz3JWJ4h5HuL4ULsnx3pqjmHQ",
+  "refereePublicKey": "6HzMz4vsXsSko7e2y3PkL2fuEdRGkpPjSyJDyp6XcT4P",
+  "deploySignature": "47NBMvC63kQ1PH36gZL2UnyWzinEBXZYHJNqKnACNSFfunPHWQpQQyoBtDH6AL24okVuMUjPVS1XngW1kyzNGvbP",
+  "deploySlot": 509817685,
+  "deployBlockTime": 1791701535,
+  "binaryBytes": 102136,
+  "binarySha256": "c886ecf09582aba5923e7ee70ad99330a2100f31a8324322f6ebd03e8c105094",
+  "verifiedAt": "2026-10-11T07:04:05.000Z",
+  "fundedDevnetRoundVerified": true,
+  "fundedDevnetRoundReceipt": "chain/devnet-game-receipt.json"
+}

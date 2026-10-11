@@ -3,7 +3,7 @@ import { PublicKey } from "@solana/web3.js";
 import { GameStore, type RoomRecord, type SessionRecord, type PracticeRecord } from "./game-store";
 import { ROUND_SECONDS, STAKE_MIN, STAKE_MAX, calculateResult, distanceMeters, formatGuessMessage, validateCoordinates } from "./game-math";
 import { pickLocation, getLocation, getSceneAsset, getPreviewLocation } from "./locations.server";
-import { escrowConfiguration, createDeposit, joinDeposit, verifyDeposit, readEscrow, startEscrow, settleEscrow, recoveryTransaction, automaticRefund, terminalReceipt } from "./game-chain.server";
+import { escrowConfiguration, createDeposit, joinDeposit, verifyDeposit, readEscrow, startEscrow, settleEscrow, recoveryTransaction, automaticRefund, terminalReceipt, reclaimEscrowRent } from "./game-chain.server";
 
 type GameEnvironment = { DB?: D1Database; GEO_OPERATOR_TOKEN?: string; SOLANA_PROGRAM_ID?: string; SOLANA_RPC_URL?: string; SOLANA_REFEREE_SECRET?: string };
 export const gameEnvironment = () => env as unknown as GameEnvironment;
@@ -133,6 +133,8 @@ async function publicRoom(request: Request, store: GameStore, room: RoomRecord, 
 /** Reconcile against confirmed chain state, then relay an idempotent start/settlement. */
 export async function synchronizeRoom(store: GameStore, room: RoomRecord): Promise<RoomRecord> {
   if (room.status === "cancelled" || room.status === "finished") return room;
+  // Once the start is confirmed, only off-chain guesses change until the deadline.
+  if (room.status === "active" && room.deadline && Date.now()<room.deadline) return room;
   const chain = await readEscrow(room);
   if (!chain) return room;
   if (chain.state === 3 || chain.state === 4) {
@@ -143,7 +145,7 @@ export async function synchronizeRoom(store: GameStore, room: RoomRecord): Promi
     }
     const result=room.result_json?JSON.parse(room.result_json):null;
     if (result && signature) result.signature=signature;
-    await store.patchRoom(room.code,{status:finished,lease_until:0,settlement_signature:signature,...(result?{result_json:JSON.stringify(result)}:{})});
+    await store.patchRoom(room.code,{status:finished,lease_until:0,settlement_signature:signature,...(Number.isSafeInteger(chain.terminalAt)?{terminal_at:chain.terminalAt*1000}:{}),...(result?{result_json:JSON.stringify(result)}:{})});
     return (await store.room(room.code))!;
   }
   await store.patchRoom(room.code, { creator_confirmed: 1, opponent_confirmed: chain.state >= 1 ? 1 : 0,
@@ -194,7 +196,7 @@ export async function createRoom(request: Request) {
   const data = await body(request), wallet = walletAddress(data.wallet);
   const stakeLamports=stakeAmount(data.stakeLamports);
   const config=await escrowConfiguration();
-  if (!config.ready || !config.refereeWallet) throw new GameError("ESCROW_NOT_CONFIGURED", "SOL escrow is not deployed yet. Practice is available; no test SOL has been requested.", 503);
+  if (!config.ready || !config.refereeWallet) throw new GameError("ESCROW_NOT_CONFIGURED", "Room staking is temporarily unavailable. No test SOL has been requested.", 503);
   const store = gameStore(), location = await pickLocation();
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";
@@ -325,7 +327,19 @@ export async function operatorTick(request: Request) {
 export async function runOperatorTick() {
   const store=gameStore(),rooms=await store.pendingRooms(Date.now());
   const results=await Promise.allSettled(rooms.map(room=>synchronizeRoom(store,room)));
+  const terminalRooms=await store.rentCandidates(Date.now());
+  const rentResults=await Promise.allSettled(terminalRooms.map(async room=>{
+    if (!await store.takeLease(room.code,Date.now())) return false;
+    try {
+      const reclaim=await reclaimEscrowRent(room);
+      await store.patchRoom(room.code,{terminal_at:reclaim.terminalAt,...(reclaim.closed?{rent_reclaimed_at:Date.now(),rent_signature:reclaim.signature}:{}),last_error:null});
+      return reclaim.closed;
+    } catch {
+      await store.patchRoom(room.code,{last_error:"Rent reclamation retry pending"});
+      return false;
+    } finally { await store.patchRoom(room.code,{lease_until:0}); }
+  }));
   await store.cleanup(Date.now());
-  return {checked:rooms.length,processed:results.filter(result=>result.status==="fulfilled").length,serverTime:Date.now()};
+  return {checked:rooms.length,processed:results.filter(result=>result.status==="fulfilled").length,rentChecked:terminalRooms.length,rentReclaimed:rentResults.filter(result=>result.status==="fulfilled" && result.value).length,serverTime:Date.now()};
 }
 export const sweepRooms=runOperatorTick;

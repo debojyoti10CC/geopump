@@ -1,0 +1,87 @@
+{
+  "rpc": "http://127.0.0.1:18899",
+  "programId": "9akMspt9zUEXS5Yp8NBZGNKhRgtdLMi7oMhxpC7G1BAk",
+  "creator": "HN7dUEVmXitpWLyccEjqx18yfihLdC5Atea8pqMjtPyU",
+  "joiner": "GrsjRQxz4fvHeHvqZhCX9gbyDboJUrhtB9yZAeDTt8d",
+  "referee": "6HzMz4vsXsSko7e2y3PkL2fuEdRGkpPjSyJDyp6XcT4P",
+  "stakeLamports": "1000001",
+  "rentLamports": 3480000,
+  "checkedAt": "2026-10-11T02:04:15.592Z",
+  "receipts": [
+    {
+      "name": "create-1",
+      "signature": "3J23d4pyW9ReeYos18bCMeAME2jh4BVTypghNLkKYbYmN5w7qaTPJCbzyMQ2zhiXvyThQ23TVJ8o412EXudk3T4s",
+      "room": "5qhHYjdxypxAAuSvdQaobS8tdWkw3a2NaSCn5uWV9arr"
+    },
+    {
+      "name": "join-1",
+      "signature": "7EUwmVT2Hb75GXpTKyc2mbQ8U1zWA2C9W3kkbTCVPEQuzHp9n6HWJxnVYcoVZzLSHQjxxoQu6j7EBUYQgE3YR6q",
+      "room": "5qhHYjdxypxAAuSvdQaobS8tdWkw3a2NaSCn5uWV9arr"
+    },
+    {
+      "name": "start-1",
+      "signature": "4qnmDcRJrSChCCMr57uDZCqc7xa1W1nRPV6NGap9SNadAzDnqM6JtbQGXib7GvZQTj49ov9X3c6sthk5wjEfmC7z",
+      "room": "5qhHYjdxypxAAuSvdQaobS8tdWkw3a2NaSCn5uWV9arr"
+    },
+    {
+      "name": "create-2",
+      "signature": "TQqR4ZnCRiUUx2ZSyJuqvvjWfWDtyQs9jDyEwimWSqn3YCqM4uiQH6mCWBbBPG4LpbYNFMGQoTLK7gW3vMSM7tj",
+      "room": "DoqRntTEEig99C4S8gWZmbcLPgPCRsDs9krGxD4wy9Bh"
+    },
+    {
+      "name": "join-2",
+      "signature": "236RijFaaA4bGNH5Qs1PPVS7ifie8YqDzLb1BxFog27Za2jUZGnB4X22W7XsQA8Dmd5eUyBc3c6RqaCTAQe6dQR6",
+      "room": "DoqRntTEEig99C4S8gWZmbcLPgPCRsDs9krGxD4wy9Bh"
+    },
+    {
+      "name": "start-2",
+      "signature": "2cDBiLZ6aftEpj8cegz9sBC4iRT9iW4zeRxFRmA89K6SKxVcjZsHsVif5s47CBnvVSXF65wcpSj657pbBUrvuDLz",
+      "room": "DoqRntTEEig99C4S8gWZmbcLPgPCRsDs9krGxD4wy9Bh"
+    },
+    {
+      "name": "create-3",
+      "signature": "5GL2G5z2TGS6KNcdJVmgF345znEMhfDL8GxuT2V6Qg17c1nvVykuv5Sy7PYEgeQQEEy9d97tVax7AUwgLVsBJ8cL",
+      "room": "57q9HcarjUc6suMq6zhSmKJmf4X3w7RCBijUWpdMnqYG"
+    },
+    {
+      "name": "join-3",
+      "signature": "4YY78LAnzF4sJ9FGh98Z7AXpxDY6V3mBNA4KyRCpYhnS5xtVQbt6jBqQhSLGhweDjxvJb8FXFEj32aJFEJXwj6Sw",
+      "room": "57q9HcarjUc6suMq6zhSmKJmf4X3w7RCBijUWpdMnqYG"
+    },
+    {
+      "name": "start-3",
+      "signature": "5aYyQk3cKJ6ahZdbjreagZUZG3fRCka9snEpy2YN3CPEXjgypmVoPbDwbYC8PRzB4AzSPa3W8vRRQemM5K7ubqVV",
+      "room": "57q9HcarjUc6suMq6zhSmKJmf4X3w7RCBijUWpdMnqYG"
+    },
+    {
+      "name": "prefund-cancel",
+      "signature": "4NgS4z3oNYxoErrmrYQXJh9KJWsYYsUEsVM5PpbJQrj8KnWRBc1Qod981hQtQo9kBVeChMJ3bM3igCTKKyDkahJu",
+      "room": "3seFds7dghixsZqki5nkBiE66Us7AwUH8U4MXssEgVEw"
+    },
+    {
+      "name": "create-cancel",
+      "signature": "38ZhdyTRiWuKiX7ishyrwZwB45mWWCshyFf2JACHvQ8W8qHiwndV8saVjcvQmV4UJwbRJv6Mhk1TAQxMTx9S2Qs3",
+      "room": "3seFds7dghixsZqki5nkBiE66Us7AwUH8U4MXssEgVEw"
+    },
+    {
+      "name": "cancel",
+      "signature": "5N7DzKLfdezmS8vtaxtLxLnUR5CTsA3MpJ9RZT3afVb1BXywmPyyn1Lhj8mZRK1YQC5FrE28iAAmfdfsKBkamM56",
+      "room": "3seFds7dghixsZqki5nkBiE66Us7AwUH8U4MXssEgVEw"
+    },
+    {
+      "name": "settle-1",
+      "signature": "3MAhhaZC9PLi5dJHM3hj1x7MDtkRxXqGLXqQtgqhBRs1vsW2s4x9PNAny5uxWprzvZ2f6dXHsxz2Zz3W5RyVoXgF",
+      "room": "5qhHYjdxypxAAuSvdQaobS8tdWkw3a2NaSCn5uWV9arr"
+    },
+    {
+      "name": "settle-2",
+      "signature": "3qzSEB3zfnEE6VEdoyPQYihitUyhFi12oJ1iVNS8ziLGKUHFKfEhBUc7MwceDJhJZWdg7nDhnr9ima1zfPGW7qJ",
+      "room": "DoqRntTEEig99C4S8gWZmbcLPgPCRsDs9krGxD4wy9Bh"
+    },
+    {
+      "name": "settle-3",
+      "signature": "5MhPMHqDmZKH1oHYAfPkAss6tNroECvGUDLkJdip6nXYYtrPjEcaz8CZnArZdvPcQeAHfeVH7NHhi68KqVa4XW2w",
+      "room": "57q9HcarjUc6suMq6zhSmKJmf4X3w7RCBijUWpdMnqYG"
+    }
+  ]
+}

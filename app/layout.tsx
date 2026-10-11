@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "geopump — a little lost. a lot competitive.",
+  title: "geopump — Geo Duels",
   description: "Two friends. One real location. 30 seconds to guess. Play Geo Duels with Solana devnet test SOL.",
   other: {
     "codex-preview": "development",
