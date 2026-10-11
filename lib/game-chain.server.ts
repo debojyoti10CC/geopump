@@ -21,7 +21,7 @@ function serverConnection(url:string) {
     connection=new Connection(url,{commitment:"confirmed",fetch:async(input,init)=>{
       const request=rpcQueue.catch(()=>undefined).then(async()=>{
         const pause=350-(Date.now()-lastRpcAt);
-        if(pause>0)await new Promise(resolve=>setTimeout(resolve,pause));
+        if (pause>0)await new Promise(resolve=>setTimeout(resolve,pause));
         lastRpcAt=Date.now();
         return fetch(input,init);
       });

@@ -52,7 +52,7 @@ export const terminalReceipt=async(room)=>{if(room.last_error==='TEST_TERMINAL_H
 export const reclaimEscrowRent=async(room)=>({closed:true,signature:'rent-close-receipt',terminalAt:room.terminal_at||Date.now()-86400001});`,loader:"js"}));
     }}],
   });
-  mf=new Miniflare({modules:true,script:bundled.outputFiles[0].text,compatibilityDate:"2026-05-15",compatibilityFlags:["nodejs_compat"],d1Databases:{DB:"geo-duels-service-test"},bindings:{SOLANA_PROGRAM_ID:programId}});
+  mf=new Miniflare({modules:true,script:bundled.outputFiles[0].text,compatibilityDate:"2026-05-15",compatibilityFlags:["nodejs_compat"],d1Databases:{DB:"geo-duels-service-test"},bindings:{SOLANA_PROGRAM_ID:programId,GEO_PUBLIC_ORIGIN:"https://geopumpp.vercel.app"}});
   db=await mf.getD1Database("DB");
   await db.exec((await readFile(new URL("../drizzle/0000_geo_duels.sql",import.meta.url),"utf8")).replaceAll(/\r?\n/g," "));
   await db.exec((await readFile(new URL("../drizzle/0001_pin_escrow_authorities.sql",import.meta.url),"utf8")).replaceAll(/\r?\n/g," "));
@@ -176,6 +176,24 @@ test("preview API and cross-origin mutation protection match browser integration
   const preview=await call("/api/preview-scene");assert.equal(preview.data.sceneUrl,"/api/preview-scene/image");
   assert.match((await call(preview.data.sceneUrl)).response.headers.get("content-type"),/image\/jpeg/);
   const cross=await call("/api/practice",{...post({}),headers:{"Content-Type":"application/json",Origin:"https://attacker.invalid"}});assert.equal(cross.response.status,403);
+});
+
+test("configured Vercel proxy origin is trusted exactly while original origin and private cookies still work",async()=>{
+  for(const origin of ["https://geopumpp.vercel.app","https://geo.test"]){
+    const started=await call("/api/practice",{...post({}),headers:{"Content-Type":"application/json",Origin:origin}});
+    assert.equal(started.response.status,201);
+    const setCookie=started.response.headers.get("set-cookie");
+    assert.match(setCookie,/HttpOnly; SameSite=Strict/);assert.match(setCookie,/; Secure/);assert.doesNotMatch(setCookie,/Domain=/i);
+    assert.equal(started.response.headers.get("cache-control"),"no-store");
+    const browserCookie=cookieFrom(started.response);
+    assert.equal((await call(started.data.sceneUrl,{headers:{Cookie:browserCookie}})).response.status,200);
+    assert.equal((await call(started.data.sceneUrl)).response.status,404);
+  }
+  for(const origin of ["https://attacker.invalid","https://geopumpp.vercel.app.attacker.invalid","http://geopumpp.vercel.app","null"]){
+    const denied=await call("/api/practice",{...post({}),headers:{"Content-Type":"application/json",Origin:origin}});
+    assert.equal(denied.response.status,403);assert.equal(denied.data.error,"INVALID_ORIGIN");
+    assert.equal(denied.response.headers.get("set-cookie"),null);
+  }
 });
 
 test("terminal receipt search rejects wrong PDA, failed/unconfirmed transactions and altered transcripts",async()=>{

@@ -5,7 +5,7 @@ import { ROUND_SECONDS, STAKE_MIN, STAKE_MAX, calculateResult, distanceMeters, f
 import { pickLocation, getLocation, getSceneAsset, getPreviewLocation } from "./locations.server";
 import { escrowConfiguration, createDeposit, joinDeposit, verifyDeposit, readEscrow, startEscrow, settleEscrow, recoveryTransaction, automaticRefund, terminalReceipt, reclaimEscrowRent } from "./game-chain.server";
 
-type GameEnvironment = { DB?: D1Database; GEO_OPERATOR_TOKEN?: string; SOLANA_PROGRAM_ID?: string; SOLANA_RPC_URL?: string; SOLANA_REFEREE_SECRET?: string };
+type GameEnvironment = { DB?: D1Database; GEO_OPERATOR_TOKEN?: string; GEO_PUBLIC_ORIGIN?: string; SOLANA_PROGRAM_ID?: string; SOLANA_RPC_URL?: string; SOLANA_REFEREE_SECRET?: string };
 export const gameEnvironment = () => env as unknown as GameEnvironment;
 export class GameError extends Error {
   constructor(public readonly code: string, message: string, public readonly status = 400) { super(message); }
@@ -27,7 +27,7 @@ export async function api(action: () => Promise<Response>) {
 }
 export async function body(request: Request): Promise<Record<string, unknown>> {
   const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin) throw new GameError("INVALID_ORIGIN", "Use this game's website to submit a request.", 403);
+  if (origin && origin !== new URL(request.url).origin && origin !== gameEnvironment().GEO_PUBLIC_ORIGIN) throw new GameError("INVALID_ORIGIN", "Use this game's website to submit a request.", 403);
   const raw = await request.text();
   if (raw.length > 8192) throw new GameError("REQUEST_TOO_LARGE", "This request is too large.", 413);
   try {
