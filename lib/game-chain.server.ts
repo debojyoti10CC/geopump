@@ -20,7 +20,7 @@ function serverConnection(url:string) {
   if (!connection) {
     connection=new Connection(url,{commitment:"confirmed",fetch:async(input,init)=>{
       const request=rpcQueue.catch(()=>undefined).then(async()=>{
-        const pause=350-(Date.now()-lastRpcAt);
+        const pause=1200-(Date.now()-lastRpcAt);
         if (pause>0)await new Promise(resolve=>setTimeout(resolve,pause));
         lastRpcAt=Date.now();
         return fetch(input,init);
@@ -62,8 +62,8 @@ export async function escrowConfiguration() {
     else {
       readinessCheck??=(async()=>{try {
         const {connection,programId:program,signer}=dependencies();
-        const [account,genesis,balance]=await Promise.all([connection.getAccountInfo(program,"confirmed"),connection.getGenesisHash(),connection.getBalance(signer.publicKey,"confirmed")]);
-        const verified=!!account?.executable && genesis===DEVNET_GENESIS && balance>=100_000;
+        const [[account,referee],genesis]=await Promise.all([connection.getMultipleAccountsInfo([program,signer.publicKey],"confirmed"),connection.getGenesisHash()]);
+        const verified=!!account?.executable && genesis===DEVNET_GENESIS && (referee?.lamports??0)>=100_000;
         readiness={key,ready:verified,checkedAt:Date.now()};
         return verified;
       } catch { console.error("Escrow readiness RPC unavailable"); return readiness?.key===key && readiness.ready && Date.now()-readiness.checkedAt<300_000; }

@@ -33,7 +33,7 @@ assert.equal(room.status,'active');assert.equal(room.result,null);
 const privateScene=await fetch(`${base}${room.sceneUrl}`,{headers:{cookie:cookies.get(creator.publicKey.toBase58())||''}});
 assert.equal(privateScene.status,200,'Authenticated panorama must work through the public host');
 assert.match(privateScene.headers.get('content-type')||'',/^image\//);
-assert.equal((await fetch(`${base}${room.sceneUrl}`)).status,403,'Panorama must remain private without the room cookie');
+assert.equal((await fetch(`${base}${room.sceneUrl}`)).status,404,'Panorama must remain private without the room cookie');
 const guesses=[[creator,0,0],[joiner,45123456,90123456]];
 for(const[key,latE6,lngE6]of guesses){
   const own=(await call(key,`/api/rooms/${room.code}?wallet=${key.publicKey}`)).room,c=own.challenge;
