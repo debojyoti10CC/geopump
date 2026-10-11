@@ -1,0 +1,5 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [{"idx":0,"version":"6","when":1791657000000,"tag":"0000_geo_duels","breakpoints":false},{"idx":1,"version":"6","when":1791658000000,"tag":"0001_pin_escrow_authorities","breakpoints":false}]
+}

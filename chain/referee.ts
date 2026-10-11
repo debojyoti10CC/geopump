@@ -1,0 +1,56 @@
+import { Connection, Keypair, PublicKey, Transaction, TransactionInstruction } from "@solana/web3.js";
+import { deriveRoomPda, fetchChainRoom, PROGRAM_ID, type ChainRoom } from "../lib/chain";
+import bs58 from "bs58";
+
+/** Server-only. Never import this module into a client component. */
+export function parseRefereeSigner(secret: string): Keypair {
+  const value = secret.trim();
+  if (!value) throw new Error("SOLANA_REFEREE_SECRET is required");
+  const bytes = value.startsWith("[") ? Uint8Array.from(JSON.parse(value) as number[]) : bs58.decode(value);
+  if (bytes.length !== 64) throw new Error("Referee secret must contain 64 bytes");
+  return Keypair.fromSecretKey(bytes);
+}
+export async function buildSignedTransaction(args: { connection: Connection; instructions: TransactionInstruction[]; feePayer: PublicKey; signers?: Keypair[] }): Promise<{ transaction: Transaction; base64: string; blockhash: string; lastValidBlockHeight: number }> {
+  const latest = await args.connection.getLatestBlockhash("confirmed");
+  const transaction = new Transaction({ feePayer: args.feePayer, ...latest }).add(...args.instructions);
+  if (args.signers?.length) transaction.partialSign(...args.signers);
+  return { transaction, base64: transaction.serialize({ requireAllSignatures: false, verifySignatures: true }).toString("base64"), ...latest };
+}
+export async function sendRefereeTransaction(args: { connection: Connection; instructions: TransactionInstruction[]; signer: Keypair }): Promise<string> {
+  const { transaction, blockhash, lastValidBlockHeight } = await buildSignedTransaction({ connection: args.connection, instructions: args.instructions, feePayer: args.signer.publicKey, signers: [args.signer] });
+  const signature = await args.connection.sendRawTransaction(transaction.serialize(), { skipPreflight: false, maxRetries: 3 });
+  const result = await args.connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+  if (result.value.err) throw new Error(`Solana transaction failed: ${JSON.stringify(result.value.err)}`);
+  return signature;
+}
+/** A random signature or old room-state alone cannot serve as a deposit receipt. */
+export async function verifyDepositTransaction(args: { connection: Connection; roomId: Uint8Array; wallet: PublicKey; kind: "create" | "join"; stakeLamports: bigint; signature: string; referee?: PublicKey; programId?: PublicKey }): Promise<ChainRoom> {
+  const programId = args.programId ?? PROGRAM_ID;
+  const transaction = await args.connection.getParsedTransaction(args.signature, { commitment: "confirmed", maxSupportedTransactionVersion: 0 });
+  if (!transaction || transaction.meta?.err !== null) throw new Error("Deposit transaction is not confirmed successfully");
+  const signer = transaction.transaction.message.accountKeys.find((entry) => entry.pubkey.equals(args.wallet));
+  if (!signer?.signer) throw new Error("Deposit wallet did not sign this transaction");
+  const pda = deriveRoomPda(args.roomId, programId);
+  const expectedTag = args.kind === "create" ? 0 : 1;
+  const matching = transaction.transaction.message.instructions.some((ix) => {
+    if (!("data" in ix) || !ix.programId.equals(programId)) return false;
+    const data = bs58.decode(ix.data);
+    if (data[0] !== expectedTag) return false;
+    const expectedRoomIndex = args.kind === "create" ? 1 : 0;
+    const expectedWalletIndex = args.kind === "create" ? 0 : 1;
+    if (!ix.accounts[expectedRoomIndex]?.equals(pda) || !ix.accounts[expectedWalletIndex]?.equals(args.wallet)) return false;
+    if (args.kind === "create") {
+      if (data.length !== 73 || !Buffer.from(data.subarray(1, 33)).equals(Buffer.from(args.roomId))) return false;
+      const stake = new DataView(data.buffer, data.byteOffset, data.byteLength).getBigUint64(33, true);
+      if (stake !== args.stakeLamports) return false;
+      if (args.referee && !new PublicKey(data.subarray(41, 73)).equals(args.referee)) return false;
+    } else if (data.length !== 1) return false;
+    return true;
+  });
+  if (!matching) throw new Error("Transaction does not contain the expected room deposit");
+  const room = await fetchChainRoom(args.connection, args.roomId, programId);
+  if (!room || room.stakeLamports !== args.stakeLamports || (args.referee && !room.referee.equals(args.referee))) throw new Error("Confirmed room terms mismatch");
+  const participant = args.kind === "create" ? room.creator : room.joiner;
+  if (!participant.equals(args.wallet)) throw new Error("Confirmed room depositor mismatch");
+  return room;
+}
