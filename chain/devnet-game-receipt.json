@@ -1,36 +1,39 @@
 {
+  "origin": "https://geopumpp.vercel.app",
   "network": "devnet",
   "programId": "9knNnYeDQh1suoAx6tmhAgtmsYQvcoguTn6CkssZArsU",
-  "roomCode": "GYHZPJ",
+  "roomCode": "WG4UB2",
   "stakeLamports": "1000001",
   "potLamports": "2000002",
-  "creator": "F27zR2z381UFFtk32g441QcTEvjK64n58sy8fcARg3iL",
-  "joiner": "2EMhaEhLGQi1BfaCeUsfndBWBdepTjX6yAnZmjteAZUB",
-  "winner": "2EMhaEhLGQi1BfaCeUsfndBWBdepTjX6yAnZmjteAZUB",
+  "creator": "EXgg3DYYivdC4CjQXqZQVhiqGhDgztKHcmRHmeCubZwP",
+  "joiner": "Fxd6R61Ga7mqvngWB8GjosyRLX4TrXoqFMxEhCGWui5K",
+  "winner": "Fxd6R61Ga7mqvngWB8GjosyRLX4TrXoqFMxEhCGWui5K",
   "actualPayoutLamports": [
     "0",
     "2000002"
   ],
   "signedGuesses": 2,
   "targetHiddenDuringRound": true,
+  "authenticatedPanoramaVerified": true,
+  "anonymousPanoramaRejected": true,
   "confirmedPayout": true,
   "receipts": [
     {
       "action": "test-wallet-funding",
-      "signature": "3GBK3kdjHreL76YC9gqYC5wDpJDetgpDFhbZTxbo38nCJUVLbcnz3cLAv45nNh3hZAubPRg8okzRPYMyHy2wsHzH"
+      "signature": "51FdeCETxYXwwTGXCT5WigUpUFEUVG8wC9VRcW3LhyG3p2bgssZk27qiWjvNay6VUbp2i4VQKiexQT24eXjhVF9g"
     },
     {
       "action": "create",
-      "signature": "3ibC2Lhh9VdC8KKpKbnqXt23wuVJ54FucUAsarxG7vpkjvuucMeoqSgbkbBRyQgTEzcMu4636FmUG2Ri756nvsbG"
+      "signature": "4MaHGpmJUXrUTJMh7NPrbMYpXj8vJc3TPXqGAD8yQo4X7Mwp9uvTri4XCdGfGwoaLQ14WrSsKu6fGf9soSDSDsDN"
     },
     {
       "action": "join",
-      "signature": "3G8Zi3cqFzFfCa74kDNydfdwzABCRJd9xzyvHCGna7Dpx495zcyxPNvqELqjCus3QRenbJPpf5CG5WCvGy17QMG"
+      "signature": "4BXqgNMzT8fDWhWXXhAV8b9w6DQYZ41yVcKwUUhpgS5jMARVqG8CQepWMozrPTjNE57fMKhZzu2YdTJxr2hEuQPd"
     },
     {
       "action": "payout",
-      "signature": "CyxbQPagrYKGwCZQYoz4auQeYYYvsUCL9qqmLLPzPVckCWTb8jB43kFSiurHrsNsV28dEgrKqkcF8ZpVnoVtZ94"
+      "signature": "bn3RyeAnpKaxfq1qV2DRULxRxPPbjwdZfncFBKFGjip27n8m8Z2UQa35hUZh1CRgFTiuG7rwD7PrTYYZcxHjTMb"
     }
   ],
-  "checkedAt": "2026-10-11T07:03:39.560Z"
+  "checkedAt": "2026-10-11T10:23:41.829Z"
 }

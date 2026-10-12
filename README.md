@@ -1,74 +1,160 @@
-# geopump
+<h1 align="center">geopump</h1>
 
-**Geo Duels** is a fast, two-player geography wager game on Solana devnet. Friends open a room, stake equal amounts of test SOL, get the same real-world 360° panorama, and drop one guess on the map before the 30-second clock runs out. The closest guess takes the pot.
+<p align="center"><strong>Same place. Two guesses. Closest takes the pot.</strong></p>
 
-The game-only interface recreates Windows 95: a teal desktop, navy title bars, gray beveled windows, square controls, and a red digital countdown. Stake buttons include half, double, and maximum shortcuts. Rematches are manual. The 2:1 map supports zoom and mouse/touch dragging; connecting lines appear only after the guesses and target are revealed.
+<p align="center">
+  <a href="https://geopumpp.vercel.app/"><img src="https://img.shields.io/badge/play-live%20devnet-008080?style=flat-square" alt="Play geopump" /></a>
+  <a href="https://explorer.solana.com/address/9knNnYeDQh1suoAx6tmhAgtmsYQvcoguTn6CkssZArsU?cluster=devnet"><img src="https://img.shields.io/badge/Solana-Devnet-9945FF?style=flat-square&logo=solana&logoColor=white" alt="Solana Devnet" /></a>
+  <a href="#verification"><img src="https://img.shields.io/badge/checks-47%20passing-228B22?style=flat-square" alt="47 passing checks" /></a>
+</p>
 
-**Play:** [geopumpp.vercel.app](https://geopumpp.vercel.app/). Vercel proxies the game, API and media routes to the [published Sites Worker](https://geo-duels-arcade.ddmpersonalworkspace.chatgpt.site), which owns D1, private runtime configuration and a once-per-minute settlement/recovery cron.
+<p align="center"><img src="public/geopump-preview.jpg" width="1200" alt="The geopump Windows 95 game interface" /></p>
 
-## Game and payouts
+## At a glance
 
-- Native SOL stakes are 0.001–1 test SOL per player, represented internally as integer lamports.
-- Both players deposit the same amount to a room-specific Solana program-derived escrow address. Deposits are verified on devnet before the round begins.
-- Each player submits one wallet-authenticated map guess during a synchronized 30-second round.
-- The server computes great-circle distances in integer metres. The smaller distance wins; an exact tie returns each player's stake.
-- A winner receives both stakes. The game takes no cut; wallets pay deposit fees and the referee pays automatic settlement fees. Account rent is separate and automatically returned to its recorded payer after the on-chain terminal timestamp plus 24 hours; the operator pays the closing fee.
-- The independently submitted target, source attribution, both guesses, measured distances, and settlement transaction are shown after the round. Timeout recovery returns recorded deposits to their owners.
-- Real panorama coordinates are encrypted in the deployed runtime configuration and are not returned during an active round. The app currently uses a limited collection of licensed Panoramax scenes, rather than a globally exhaustive random Earth sampler.
+**Geo Duels** drops two friends into the same real 360° street panorama. Each stakes test SOL, finds the location on a world map, and locks a guess before the **30-second** clock expires. The closer player receives both stakes automatically.
 
-This is an early devnet build. Its off-chain referee selects locations, accepts valid guesses, and reports the result to the escrow program. A target commitment supports later verification but does not make the referee trustless. Do not use real funds or treat devnet results as production-grade fairness.
+The game runs inside a Windows 95 desktop: teal background, navy title bars, beveled controls, a red countdown, and half / 2× / MAX stake shortcuts. The map supports zoom and mouse/touch dragging. Result lines connect both guesses to the revealed target. Rematches require an explicit action; there is no automatic staking.
 
-## Deployment and checks
+**[Play geopump](https://geopumpp.vercel.app/)** · **[Source](https://github.com/debojyoti10CC/geopump)** · **[Rules](Rules.md)**
 
-The executable devnet program is [`9knNnYeDQh1suoAx6tmhAgtmsYQvcoguTn6CkssZArsU`](https://explorer.solana.com/address/9knNnYeDQh1suoAx6tmhAgtmsYQvcoguTn6CkssZArsU?cluster=devnet). `chain/deployment.json` records deployment evidence; its referee was funded with 5 test SOL.
+## Play a round
 
-**Earlier deployed-program API round GYHZPJ passed:** two confirmed deposits, two signed guesses, the target hidden during play, and the exact **2,000,002-lamport** winner payout. `chain/devnet-game-receipt.json` records the evidence and [confirmed payout](https://explorer.solana.com/tx/CyxbQPagrYKGwCZQYoz4auQeYYYvsUCL9qqmLLPzPVckCWTb8jB43kFSiurHrsNsV28dEgrKqkcF8ZpVnoVtZ94?cluster=devnet). Worker confirmations use HTTP polling and paced server RPC requests. The public site reports `escrowReady: true`; a full funded duel through its current Vercel route is still undergoing final verification.
+1. **Connect** Phantom or Solflare in a wallet-capable browser and use devnet test SOL.
+2. **Create a room** with a stake from **0.001 to 1 SOL**. Approve the deposit and sign the readable room-access message.
+3. **Invite a friend** using the six-character code or room link. A different wallet deposits the same stake.
+4. **Explore the shared panorama.** Both confirmed deposits start one synchronized 30-second round. Pan and zoom the scene; move the map to choose your location.
+5. **Lock your guess.** Sign the exact room and coordinates. The server acknowledges it only after durable storage. Your opponent’s guess stays private until time expires.
+6. **See the result and receipt.** The target, both distances and connecting lines appear. The program pays the recorded winner directly; no separate winner claim is needed.
 
-Current checks pass: **15 service tests, 7 native Rust tests, and 4 client tests**, including the exact trusted Vercel-origin regression. Separate local-validator transaction evidence lives in `chain/e2e-receipts.json`. Source is published at [debojyoti10CC/geopump](https://github.com/debojyoti10CC/geopump).
+Wallet approvals and confirmed deposits are distinct. A rejected or pending transaction does not start a funded round. Reconnecting restores the same room and its existing deadline.
 
-The sponsored deployment has seven-day idle retention and sponsor-held upgrade authority (`FEvT5nka9qBSXryv65P8ScjvGtfLUE7LgPu1rzuJ38h8`). The registered upgrade owner is recorded separately in the deployment file. This temporary devnet hosting is an operational dependency.
+## Stakes, scoring and recovery
 
-```powershell
-node --test tests/game-service.test.mjs
-```
+Amounts use integer lamports throughout. For equal stake **S** and a **zero game fee**:
+
+| At the deadline | Distribution |
+| --- | --- |
+| Both guesses accepted; one is closer | Winner receives **2S** |
+| Equal whole-metre distances | Each receives **S** |
+| Only one accepted guess | That player receives **2S** |
+| Neither player guesses | Each receives **S** |
+
+Distance uses haversine with Earth radius **6,371,000 m**, rounded to the nearest whole metre. That integer distance decides ties. Network fees and refundable account rent are separate from the pot.
+
+| Window | Fixed rule |
+| --- | --- |
+| Join | Within 15 minutes of creation; creator can cancel before a second deposit |
+| Start | Within 60 seconds of the second deposit, otherwise both stakes become refundable |
+| Guess | 30 seconds from the program’s recorded start time |
+| Settle | Within 5 minutes after guessing ends, otherwise recorded players can recover their stakes |
+| Rent return | Eligible 24 hours after on-chain settlement/refund; scheduled sweep closes to the original rent payer |
+
+The operator pays automatic start, payout, refund and close fees. Wallet-paid timeout recovery works without its private key or fee balance. Recovery still requires the network and deployed program to remain available. Terminal payouts cannot execute twice.
+
+## Architecture
+
+| Layer | Responsibility |
+| --- | --- |
+| Browser | Windows 95 game, wallet signing, panorama, map pin, countdown and receipt display |
+| Vercel | Public domain; proxies game/API/media routes to the Sites Worker |
+| Vercel `/api/rpc` | Node.js 22 relay to fixed official devnet; bounded, allowlisted JSON-RPC, never a signing service |
+| Sites Worker | Authenticated rooms, private scenes, signed guesses, scoring and referee transactions |
+| Cloudflare D1 | Durable rooms/sessions/guesses, pinned program/referee addresses, receipts and close markers |
+| Minute cron | Settlement retries, fixed-deadline refunds and eligible 24-hour rent returns |
+| Solana program | Room PDA escrow, exact equal deposits, fixed deadlines, target reveal checks and one-time transfers |
+
+Both production wallet and server requests use **`https://geopumpp.vercel.app/api/rpc`**, which forwards to official devnet without an RPC credential. Helius configuration remains stored privately but is inactive; there is **no automatic provider fallback**.
+
+The [Sites backend](https://geo-duels-arcade.ddmpersonalworkspace.chatgpt.site) owns the game database and operator secrets. Vercel does not maintain a second database. Session cookies are host-only, HttpOnly and SameSite Strict; the Worker trusts the exact public origin. Panorama URLs require the authenticated room session.
+
+## Verification
+
+**The public two-wallet flow has passed.** [Recorded round WG4UB2](chain/devnet-game-receipt.json) verified both deposits, two signed guesses, a hidden target during play, authenticated panorama access (`200`), anonymous rejection (`404`), and the exact **2,000,002-lamport** winner balance increase.
+
+| Evidence | Confirmed outcome |
+| --- | --- |
+| WG4UB2 | [2,000,002-lamport winner payout](https://explorer.solana.com/tx/bn3RyeAnpKaxfq1qV2DRULxRxPPbjwdZfncFBKFGjip27n8m8Z2UQa35hUZh1CRgFTiuG7rwD7PrTYYZcxHjTMb?cluster=devnet) |
+| Player round TASTNV | [0.002 SOL two-player payout](https://explorer.solana.com/tx/3R54WRH9XSXe2VnDfku3YBaDbtfaaKoaN9yG3E68Z5V73KEcDddTzbuthsmASfHR69B8mYw9p25X8jPGdQbPf144?cluster=devnet) |
+| [Local-validator checks](chain/e2e-receipts.json) | Winner/tie payouts, refunds, rent accounting, invalid commitment and replay rejection |
+
+Passing checks: **15 service + 4 client + 9 referee + 2 wallet + 10 relay + 7 Rust = 47**. They cover durable guesses, signatures/privacy, deposit consistency, wallet broadcast routing, relay restrictions, exact payout arithmetic and rent timing. Test evidence does not replace an independent audit.
+
+The executable devnet program is [`9knNnYeDQh1suoAx6tmhAgtmsYQvcoguTn6CkssZArsU`](https://explorer.solana.com/address/9knNnYeDQh1suoAx6tmhAgtmsYQvcoguTn6CkssZArsU?cluster=devnet). [Deployment metadata](chain/deployment.json) records its binary fingerprint and sponsor. The referee was funded with 5 test SOL.
 
 ## Run locally
 
-Requires Node.js 22.13 or newer and a Solana wallet browser extension configured for devnet.
+Use Node.js **22.13+**, npm, and Phantom or Solflare in Chrome, Edge or a compatible wallet browser. Native program work also requires Rust 1.84+ and compatible Solana tooling. The embedded app browser does not provide extension wallets.
 
 ```powershell
 npm ci
-npm run dev -- --port 4173 --host 127.0.0.1
+npm run build
 ```
 
-Open http://127.0.0.1:4173/. The screen contains only the friend-duel game. The development server reflects edits immediately. Room play requires the deployed program, funded referee, scene secret, and local database migrations. Apply every migration in `drizzle/` in order to the local D1 database; hosted migrations are applied during Sites publication.
+Configure an ignored `.dev.vars` with the values below. A **new** local D1 database needs all three migrations, using the generated Worker configuration:
+
+```powershell
+npx wrangler d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_geo_duels.sql
+npx wrangler d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0001_pin_escrow_authorities.sql
+npx wrangler d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0002_reclaim_escrow_rent.sql
+npm run start -- --port 4173
+```
+
+Open **http://127.0.0.1:4173/**. For hot reload, use `npm run dev -- --port 4173 --host 127.0.0.1` and initialize its local D1 environment as well. The portable checkout profile uses Vinext; managed Linux uses the supplied build/environment wrappers.
+
+Room play requires a funded devnet referee and a licensed scene catalog with its matching key. Deployed signing keys and the bundled catalog key are intentionally excluded from public source. Independent deployments must supply their own configuration/catalog.
 
 ## Runtime configuration
 
-Site-only values belong in the hosting provider's secret store, not the repository. The deployed Worker uses a D1 binding named `DB` and these values:
+The Sites Worker uses the **`DB`** D1 binding. Production configuration and private keys belong in its runtime secret store.
 
 | Variable | Purpose |
 | --- | --- |
-| `SOLANA_PROGRAM_ID` | Deployed Geo Duels escrow program address on devnet. |
-| `SOLANA_RPC_URL` | Private Helius devnet RPC configuration in the server secret store. Its credential must never reach source, logs or browsers. |
-| `SOLANA_REFEREE_SECRET` | Secret key for the dedicated devnet settlement/refund referee. Store as a secret. |
-| `GEO_SCENE_SECRET` | 32-byte hex AES key for the encrypted real-location catalog. Store as a secret. |
-| `GEO_OPERATOR_TOKEN` | Optional secret to restrict an operator-triggered room sweep. |
-| `GEO_PUBLIC_ORIGIN` | Exact trusted public proxy origin: `https://geopumpp.vercel.app`. Other cross-origin mutations remain blocked. |
+| `SOLANA_PROGRAM_ID` | Devnet escrow program address shown above |
+| `SOLANA_RPC_URL` | Server RPC; production uses `https://geopumpp.vercel.app/api/rpc` |
+| `SOLANA_PUBLIC_RPC_URL` | Browser-safe RPC; production uses the same relay |
+| `SOLANA_REFEREE_SECRET` | Server-only 64-byte JSON array or base58 key for the funded referee |
+| `GEO_SCENE_SECRET` | Server-only 32-byte hex AES key matching the encrypted catalog |
+| `GEO_PUBLIC_ORIGIN` | Exact trusted proxy origin: `https://geopumpp.vercel.app` |
+| `GEO_OPERATOR_TOKEN` | Optional secret for authenticated manual sweeps |
 
-For local Worker runs, put the secret values in an ignored `.dev.vars` file. `scripts/encrypt-scenes.mjs` can encrypt a local scene catalog into `lib/scene-data.server.enc.json`; keep `.secrets/scene.key` private and set its hex value as `GEO_SCENE_SECRET`. Never commit private keys or that key file.
+For local wallet requests, use an endpoint that permits the local browser origin, such as official devnet; the production relay accepts the game origin only. Never commit `.dev.vars`, `.secrets/`, signing keys, a catalog key or credential-bearing RPC URLs. `scripts/encrypt-scenes.mjs` encrypts a privately supplied `lib/scene-data.server.json` and writes its private key under `.secrets/`.
 
-Apply all three D1 migrations in order: `0000_geo_duels.sql`, `0001_pin_escrow_authorities.sql`, then `0002_reclaim_escrow_rent.sql`. Scheduled sweeps settle/refund eligible rooms and reclaim terminal account rent. Wallet-paid timeout recovery remains available without the referee's private key or fee balance.
+## Commands and checks
 
-## Project map
+| Command | Purpose |
+| --- | --- |
+| `npm run dev -- --port 4173 --host 127.0.0.1` | Hot-reload development |
+| `npm run check` | Check TypeScript |
+| `npm run lint` | Check source style |
+| `npm run build` | Build the Sites Worker and browser assets |
+| `npm test` | Run all 40 Node service/client/referee/wallet/relay tests |
+| `cargo test --manifest-path programs/geo-duels/Cargo.toml` | Run the seven native program tests |
+| `node scripts/build-vercel-proxy.mjs` | Prepare Vercel routing plus the Node 22 RPC function |
 
-- `app/`, `components/` — retro desktop UI, wallet actions, map and panorama views.
-- `app/api/`, `lib/game-server.ts`, `lib/game-store.ts` — authenticated room service, scoring and durable D1 state.
-- `programs/geo-duels/` — native Solana escrow program.
-- `lib/chain.ts`, `lib/game-chain.server.ts`, `chain/referee.ts` — wallet transactions and server settlement/recovery.
-- `lib/game-math.ts` — round duration, exact lamport boundaries, distance and payout rules.
-- `lib/scene-data.server.enc.json` — authenticated encrypted scenes; coordinates and source records stay server-only.
-- `public/world.json`, `public/vendor/` — Natural Earth world map and local Pannellum viewer.
-- `Architecture.md`, `Rules.md`, `Phases.md`, `Memory.md` — maintained product and implementation notes.
+The seven Rust tests are separate from `npm test`. `scripts/verify-devnet-room.mjs` is an operator integration run that funds fresh test wallets and writes chain evidence; it requires the private local referee file and is not a unit test.
 
-Panoramax scene authorship and CC BY-SA license links are displayed with each result. The bundled Pannellum viewer is MIT-licensed; the Natural Earth map data is public domain. See the corresponding asset license files and in-app attribution.
+## Repository map
+
+```text
+app/                         pages and authenticated Worker API routes
+components/                  desktop, panorama, map and wallet interactions
+lib/game-*.ts                durable service, scoring, chain bridge and receipts
+lib/chain.ts                 PDA derivation, account layout and client instructions
+lib/locations.server.ts      server-only scene decryption and media delivery
+chain/                       referee, tests and confirmed deployment/round evidence
+programs/geo-duels/           native Rust escrow program
+drizzle/                     ordered D1 migrations
+scripts/                     build wrappers, RPC relay and operator tooling
+public/                      world map, viewer and licensed static assets
+Architecture.md / Rules.md    technical model and exact round rules
+Phases.md / Memory.md         delivery evidence and continuity notes
+```
+
+## Trust and operations
+
+This is a **test-SOL devnet prototype**. The hosted referee selects from a limited licensed Panoramax pool, keeps guesses private, accepts timely requests and calculates distances. Commitment/reveal prevents replacing the committed target; it does not independently prove honest scoring, uniform sampling or truthful timeout reports.
+
+The sponsored deployment has **seven-day idle retention** and sponsor-held upgrade authority (`FEvT5nka9qBSXryv65P8ScjvGtfLUE7LgPu1rzuJ38h8`). The registered upgrade owner is recorded separately. Program availability, operator funding and monitoring require maintenance. Mainnet and real-money play have not been authorized or audited.
+
+Panoramax author/license credits accompany scenes and results. Pannellum is MIT-licensed; Natural Earth map data is public domain. See bundled license files and the in-game attribution.

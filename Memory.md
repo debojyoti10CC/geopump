@@ -1,6 +1,6 @@
 # Geo Duels — Project Memory
 
-Last updated: 2026-10-11, Asia/Calcutta.
+Last updated: 2026-10-12, Asia/Calcutta.
 
 ## User decisions
 
@@ -10,7 +10,7 @@ Last updated: 2026-10-11, Asia/Calcutta.
 - Game only: remove practice and marketing header. Maps preserve 2:1 proportions, support drag after zoom/lock, and connect guesses to the target only after reveal.
 - Build the full product, delegate specialized work to agents, use real geolocations, proper payout math, and working user actions.
 - Initial chain: **Solana devnet with test SOL**.
-- Push the code to `https://github.com/debojyoti10CC/geopump.git`, branch `main`, with README heading `# geopump` and initial commit message `first commit`.
+- Publish at `https://github.com/debojyoti10CC/geopump.git`, branch `main`; initial commit message was `first commit`. Latest README request uses a centered geopump title/badges, actual product screenshot, game flow, architecture, setup, configuration, source map and evidence, inspired by the supplied Soleil structure without copying its assets/claims.
 
 ## Implemented design
 
@@ -27,15 +27,16 @@ Last updated: 2026-10-11, Asia/Calcutta.
 
 - Frontend, backend/D1 API, native escrow source/client/referee, local licensed scenes, and first-pass unit/security tests exist in `outputs/geo-duels/`.
 - `node --test tests/game-service.test.mjs`: 15 passed, 0 failed; covers privacy, signatures, replay/tamper, concurrency, scoring, timeout, fail-closed escrow, receipt recovery, rent timing/recipient, close markers, wallet-funded recovery without an operator secret, and exact trusted proxy-origin handling.
-- Native Rust program: 7 checks pass. Client: 4 checks pass. Local validator execution: 15 confirmed transactions with exact winner/tie payouts, refunds, rent accounting, invalid commitment and replay rejection, recorded in `chain/e2e-receipts.json`.
+- `npm test` now runs **40 passing Node tests**: 15 service + 4 client + 9 referee + 2 wallet + 10 relay. Native Rust adds 7 passing tests, for 47 total. `npm run check` checks TypeScript. Local-validator transaction evidence covers winner/tie payouts, refunds, rent, commitment and replay checks in `chain/e2e-receipts.json`.
 - Executable devnet program deployed: `9knNnYeDQh1suoAx6tmhAgtmsYQvcoguTn6CkssZArsU`, verified in `chain/deployment.json`. Referee was funded with 5 devnet SOL.
-- Full deployed API round **GYHZPJ passed** on 2026-10-11: two confirmed deposits, two signed guesses, target hidden during play, and exact **2,000,002-lamport** winner payout. Evidence: `chain/devnet-game-receipt.json` and [confirmed payout](https://explorer.solana.com/tx/CyxbQPagrYKGwCZQYoz4auQeYYYvsUCL9qqmLLPzPVckCWTb8jB43kFSiurHrsNsV28dEgrKqkcF8ZpVnoVtZ94?cluster=devnet).
-- Official RPC returned HTTP 403; public OnFinality was subsequently rate-limited. Current server RPC is private Helius devnet via the hosting secret store. Never copy its credential or full credential-bearing URL into docs, source, browser configuration or logs. Worker confirmations use HTTP polling and paced server RPC requests.
+- Full public round **WG4UB2 passed**: both deposits, two signed guesses, hidden target, authenticated panorama `200`, anonymous panorama `404`, and exact **2,000,002-lamport** winner balance increase. Evidence: `chain/devnet-game-receipt.json` and [payout](https://explorer.solana.com/tx/bn3RyeAnpKaxfq1qV2DRULxRxPPbjwdZfncFBKFGjip27n8m8Z2UQa35hUZh1CRgFTiuG7rwD7PrTYYZcxHjTMb?cluster=devnet).
+- The user's room **TASTNV** finalized a [0.002 SOL two-player payout](https://explorer.solana.com/tx/3R54WRH9XSXe2VnDfku3YBaDbtfaaKoaN9yG3E68Z5V73KEcDddTzbuthsmASfHR69B8mYw9p25X8jPGdQbPf144?cluster=devnet).
+- Official Worker RPC returned HTTP 403, public OnFinality was rate-limited and Helius intermittently returned missing accounts. Active server and wallet RPC is `https://geopumpp.vercel.app/api/rpc`, a Vercel Node.js 22 bounded relay to fixed official devnet. Helius key remains stored privately but inactive; no automatic fallback is wired. Never publish any credential. Worker confirmations use HTTP polling and paced requests.
 - Sponsor: `https://deployer.devnet.solana.com`; idle retention seven days. Sponsor holds upgrade authority `FEvT5nka9qBSXryv65P8ScjvGtfLUE7LgPu1rzuJ38h8`; registered upgrade owner is recorded separately in the deployment file. Do not present this sponsored prototype as permanently hosted or immutable.
 - Apply D1 migrations in order: `0000_geo_duels.sql`, `0001_pin_escrow_authorities.sql`, `0002_reclaim_escrow_rent.sql`.
-- Public site: `https://geopumpp.vercel.app/`, proxying UI/API/media to `https://geo-duels-arcade.ddmpersonalworkspace.chatgpt.site`. Backend owns D1, private scene/referee/RPC configuration and the once-per-minute cron; Vercel is the public routing layer. GitHub source is published at `https://github.com/debojyoti10CC/geopump`.
-- Backend version 2 deployed successfully: `appgdep_6acb5c202ee481918da43491ab5a52e4`, environment revision 5, source `be3d4e19d3c0f5d8f57e64df94bce8f470a495b2`. Public `/api/config` reports `escrowReady: true`.
-- Earlier deployed-program two-wallet API verification is complete. Full funded verification through the current public Vercel route remains pending until its new confirmed receipt is supplied.
+- Public site: `https://geopumpp.vercel.app/`, proxying UI/API/media to `https://geo-duels-arcade.ddmpersonalworkspace.chatgpt.site`; Vercel separately executes `/api/rpc`. Sites owns D1, encrypted scenes, referee and minute cron. GitHub source is published at `https://github.com/debojyoti10CC/geopump`.
+- Backend version 5 deployed: `appgdep_6acb627bdc308191a68be95d9b34df83`, environment revision 8, source `a45cb91c00041487c35b76ff4dbfd795b9dc1c13`. Public `/api/config` reports `escrowReady: true`.
+- Funded public two-wallet verification is complete. Root is publishing final UI/flow refinements; do not claim that later publication until verified. Approved README screenshot path: `public/geopump-preview.jpg`, supplied by root from the actual game.
 - Devnet referee/scene secrets are ignored under `.secrets/`/`.dev.vars`; do not copy secret values to source or logs.
 - The current Vercel site and its backing Sites Worker are public. Preserve existing access and secret boundaries during later changes.
 

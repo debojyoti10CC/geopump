@@ -2,7 +2,7 @@
 
 These rules describe the current devnet build. Stakes are test SOL only.
 
-Play at [geopumpp.vercel.app](https://geopumpp.vercel.app/). Its public routes proxy to the Sites Worker that maintains room state and submits payouts. The public configuration reports escrow ready; a full duel through this current public route is still undergoing final verification.
+Play at [geopumpp.vercel.app](https://geopumpp.vercel.app/). Game routes proxy to the Sites Worker that maintains room state and submits payouts. Both wallets and the service use the Vercel RPC relay to official devnet. The public configuration reports escrow ready and the funded two-wallet flow has passed.
 
 ## Start a duel
 
@@ -44,4 +44,4 @@ The referee selects from a limited supported scene pool, accepts timely signed g
 
 Rounds are short by design. Rematches require a fresh explicit action and wallet transaction; there is no auto-stake setting.
 
-The deployed devnet program uses a sponsor that retains upgrade authority and applies a seven-day idle retention policy. This temporary deployment must remain available for funded rooms and recovery; it is not a permanent mainnet service. Deployed round **GYHZPJ** verified both deposits and signed guesses, a hidden target during play, and the exact **2,000,002-lamport** winner pot. Its [payout is confirmed](https://explorer.solana.com/tx/CyxbQPagrYKGwCZQYoz4auQeYYYvsUCL9qqmLLPzPVckCWTb8jB43kFSiurHrsNsV28dEgrKqkcF8ZpVnoVtZ94?cluster=devnet).
+The sponsor retains program upgrade authority and applies a seven-day idle retention policy. This temporary deployment must remain available for funded rooms and recovery. Public round **WG4UB2** verified both deposits and signed guesses, a hidden active target, authenticated/private panorama access and the exact **2,000,002-lamport** winner pot. Its [payout is confirmed](https://explorer.solana.com/tx/bn3RyeAnpKaxfq1qV2DRULxRxPPbjwdZfncFBKFGjip27n8m8Z2UQa35hUZh1CRgFTiuG7rwD7PrTYYZcxHjTMb?cluster=devnet). Player round **TASTNV** also finalized its [0.002 SOL two-player payout](https://explorer.solana.com/tx/3R54WRH9XSXe2VnDfku3YBaDbtfaaKoaN9yG3E68Z5V73KEcDddTzbuthsmASfHR69B8mYw9p25X8jPGdQbPf144?cluster=devnet).

@@ -21,7 +21,7 @@ function loadViewer() {
   return loading;
 }
 
-export default function GamePanorama({ src, active, caption }: { src: string | null; active: boolean; caption?: string }) {
+export default function GamePanorama({ src, active, caption, label }: { src: string | null; active: boolean; caption?: string; label?: string }) {
   const container = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLDivElement>(null);
   const viewer = useRef<Viewer | null>(null);
@@ -51,7 +51,7 @@ export default function GamePanorama({ src, active, caption }: { src: string | n
     <div className="panorama-renderer" ref={container} />
     {!ready && !failed && <div className="scene-loading"><span className="loading-globe">◎</span><span>{src ? "Connecting to somewhere…" : "Your next adventure is loading…"}</span></div>}
     {failed && <div className="scene-loading"><ImageOff size={30} /><span>The 360° viewer couldn’t load.</span><button onClick={() => { setFailed(false); setNotice("Please refresh the page or try another browser with WebGL support."); }}>Troubleshoot</button>{notice && <small>{notice}</small>}</div>}
-    <span className="scene-label"><span className="live-dot" />{active ? "LIVE LOCATION · ANSWER HIDDEN" : "SCENE PREVIEW · START A FRIEND DUEL"}</span>
+    <span className="scene-label"><span className="live-dot" />{label || (active ? "LIVE LOCATION · ANSWER HIDDEN" : "SCENE PREVIEW · START A FRIEND DUEL")}</span>
     <span className="drag-hint"><Move size={13} />{caption || "drag to look around"}</span>
     <div className="scene-tools">
       <button aria-label="Zoom into scene" title="Zoom in" disabled={!ready} onClick={() => viewer.current?.setHfov(Math.max(40, viewer.current.getHfov() - 15))}><Plus size={16} /></button>

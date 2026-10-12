@@ -30,7 +30,9 @@ async function sendTestTransaction(transaction,key){
 }
 async function call(key,path,body){
   const response=await fetch(`${base}${path}`,{method:body?'POST':'GET',headers:{...(body?{'content-type':'application/json',origin:new URL(base).origin}:{}),cookie:cookies.get(key.publicKey.toBase58())||''},body:body?JSON.stringify(body):undefined});
-  const set=response.headers.get('set-cookie');if(set)cookies.set(key.publicKey.toBase58(),set.split(';')[0]);
+  const jar=new Map((cookies.get(key.publicKey.toBase58())||'').split(';').filter(Boolean).map(part=>{const pair=part.trim(),separator=pair.indexOf('=');return [pair.slice(0,separator),pair.slice(separator+1)];}));
+  for(const set of response.headers.getSetCookie()){const pair=set.split(';')[0],separator=pair.indexOf('=');jar.set(pair.slice(0,separator),pair.slice(separator+1));}
+  cookies.set(key.publicKey.toBase58(),[...jar].map(([name,value])=>`${name}=${value}`).join('; '));
   const data=await response.json();assert.equal(response.ok,true,JSON.stringify(data));return data;
 }
 async function deposit(key,data){

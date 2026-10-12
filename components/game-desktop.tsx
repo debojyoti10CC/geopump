@@ -24,7 +24,9 @@ const errorMessage = (error: unknown) => error instanceof Error ? error.message 
 
 async function request<T>(path: string, body?: object): Promise<T> {
   const response = await fetch(path, { method: body ? "POST" : "GET", headers: body ? { "Content-Type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined, credentials: "same-origin" });
-  const data = await response.json() as { message?: string; error?: string | { message?: string } };
+  let data: { message?: string; error?: string | { message?: string } };
+  try { data = await response.json(); }
+  catch { throw new Error("Temporary connection issue. Please try again shortly."); }
   if (!response.ok) throw new Error(data.message || (typeof data.error === "string" ? data.error : data.error?.message) || "The game service couldn’t complete that request.");
   return data as T;
 }
@@ -152,7 +154,7 @@ export default function GameDesktop() {
     const poll = async () => {
       try {
         const data = await request<{ room: Room } | Room>(`/api/rooms/${room.code}${wallet ? `?wallet=${encodeURIComponent(wallet)}` : ""}`);
-        if (!stopped) { const current = "room" in data ? data.room : data; if (current.serverTime) clockOffset.current = current.serverTime - Date.now(); setRoom(current); }
+        if (!stopped) { const current = "room" in data ? data.room : data; if (current.serverTime) clockOffset.current = current.serverTime - Date.now(); setRoom(current); setNotice(currentNotice => currentNotice.startsWith("Room connection:") ? "" : currentNotice); }
       } catch (cause) { if (!stopped) setNotice(`Room connection: ${errorMessage(cause)}`); }
     };
     const timer = setInterval(poll, 1300);
@@ -210,7 +212,7 @@ export default function GameDesktop() {
   }
 
   async function processDeposit(data: Deposit) {
-    setRoom(data.room); setPin(null);
+    setRoom(data.room); setPin(null); setCopied(false);
     if (!data.transaction) return;
     if (!provider.current) throw new Error("Connect your wallet to approve this stake.");
     setBusy("Approve your test SOL stake…");
@@ -301,7 +303,7 @@ export default function GameDesktop() {
   }
 
   async function copyInvite() {
-    if (!room) return;
+    if (!room || room.status === "funding") return;
     try {
       const url = new URL(window.location.href); url.searchParams.set("room", room.code);
       await navigator.clipboard.writeText(url.toString()); setCopied(true); setTimeout(() => setCopied(false), 2500);
@@ -309,18 +311,32 @@ export default function GameDesktop() {
   }
 
   function resetLobby() {
+    if (busy) { setNotice("Finish or cancel the current wallet request before returning to the lobby."); return; }
     if (room && !["finished", "cancelled", "refunded", "funding"].includes(room.status)) { setNotice("Your funded room is still open. Cancel before a friend joins, or finish this round first."); return; }
-    setRoom(null); setPin(null); setError(""); setNotice("");
+    setRoom(null); setPin(null); setJoinCode(""); setCopied(false); setError(""); setNotice("");
     const url = new URL(window.location.href); url.searchParams.delete("room"); window.history.replaceState({}, "", url);
   }
 
   const terminal = room && ["finished", "cancelled", "refunded"].includes(room.status);
   const waiting = room && ["funding", "waiting", "starting"].includes(room.status);
+  const roomHelp = room?.status === "funding" ? "Your stake is not confirmed yet. Finish the wallet approvals before inviting your friend."
+    : room?.status === "waiting" ? room.opponentWallet === wallet ? "Finish your matching stake and room access approvals. The timer starts after both deposits confirm."
+      : room.opponentWallet ? "Your friend is confirming their stake. The timer starts after both deposits confirm."
+        : "Your stake is confirmed. Send the invite to a friend; they approve the same stake."
+    : room?.status === "starting" ? "Both stakes are confirmed. Your 30-second round is starting."
+    : active ? "Find the location. Drop a pin. Sign your final guess before zero."
+    : room?.status === "settling" ? "Time is up. Comparing guesses and confirming the Solana payout."
+    : room?.status === "refundable" ? "This room expired. Recover your stakes below before starting a new duel."
+    : "Your round receipt is below. A new room needs a new approval.";
+  const waitingHelp = room?.status === "funding" ? "Confirm your stake before inviting your friend."
+    : room?.status === "starting" ? "Both stakes confirmed. Starting your round…"
+    : room?.opponentWallet ? "Waiting for the second stake to confirm…" : "Waiting for your friend to join…";
   const timerPercentage = active ? (seconds / config.roundSeconds) * 100 : 100;
   const mapPins = target ? [{ ...target, color: "#68aa3d", label: "Actual location" }, ...(result?.guesses || []).map((guess) => ({ ...guess, color: guess.wallet === wallet ? "#ed79a6" : "#537add", label: guess.wallet === wallet ? "Your guess" : "Friend’s guess" }))] : [];
   const sceneSrc = room?.sceneUrl || preview;
-  const sceneAttribution = room?.attribution || previewAttribution;
+  const sceneAttribution = room?.sceneUrl ? room.attribution : previewAttribution;
   const locationResult = result?.location;
+  const sceneLabel = !room?.sceneUrl ? "SCENE PREVIEW · START A FRIEND DUEL" : hasResult ? "ROUND LOCATION · ANSWER REVEALED" : active ? "LIVE LOCATION · ANSWER HIDDEN" : "ROUND LOCATION · REVEALING RESULT";
 
   return <main className="desktop">
     <div className="desktop-texture" aria-hidden="true" />
@@ -344,8 +360,8 @@ export default function GameDesktop() {
             <div className="play-body">
               {room ? <div className="room-controls">
                 <div className="room-code-label">YOUR FRIEND ROOM <span>{room.status === "active" ? "● LIVE" : room.status.toUpperCase()}</span></div>
-                <div className="room-code"><strong>{room.code}</strong><button title="Copy room invite" aria-label="Copy room invite" onClick={copyInvite}>{copied ? <Check size={18} /> : <Copy size={17} />}</button></div>
-                <p className="room-help">{waiting ? "Send the invite to a friend. Both players stake the same amount." : room.status === "active" ? "Find the location. Drop a pin. Sign your final guess before zero." : "Your round receipt is below. A new room needs a new approval."}</p>
+                <div className="room-code"><strong>{room.code}</strong><button title={room.status === "funding" ? "Confirm your stake before sharing the invite" : "Copy room invite"} aria-label="Copy room invite" disabled={room.status === "funding"} onClick={copyInvite}>{copied ? <Check size={18} /> : <Copy size={17} />}</button></div>
+                <p className="room-help">{roomHelp}</p>
                 <div className="pot-display"><span>IN THE POT</span><strong><span className="sol-icon" />{lamportsToSol(room.potLamports)} <small>SOL</small></strong><span>Test SOL · 0% house fee</span></div>
                 {((room.status === "funding" || (room.status === "active" && !room.challenge) || (room.status === "waiting" && !room.sceneUrl))) && <button className="retro-button wide" onClick={async () => { setBusy("Restoring room access…"); try { await authenticate(room.code); } catch (cause) { setError(errorMessage(cause)); } finally { setBusy(""); } }} disabled={!!busy}>Restore room access</button>}
                 {room.status === "funding" && <button className="retro-button wide quiet" onClick={resetLobby} disabled={!!busy}>Back to lobby</button>}{waiting && room.status !== "funding" && room.creatorWallet === wallet && !room.opponentWallet && <button className="retro-button wide quiet" disabled={!!busy} onClick={() => cancelRoom()}>Cancel & refund stake</button>}
@@ -374,10 +390,10 @@ export default function GameDesktop() {
 
         <WindowFrame title={room ? `Geo Duels — room ${room.code}` : "Geo Duels — location & guess"} icon={<Globe2 size={16} />} className="explorer-window">
           <div className="explorer-toolbar"><div><span className="address-icon"><Globe2 size={13} /></span><span>{hasResult ? "earth://location-found" : active ? "earth://where-are-we?" : "earth://your-next-adventure"}</span><LockKeyhole size={11} /></div><span className="explorer-round"><Radio size={12} />{"FRIEND DUEL"}</span></div>
-          <div className="scene-wrapper"><GamePanorama src={sceneSrc} active={active} /><div className={`round-counter ${active && seconds <= 5 ? "urgent" : ""}`}><span>{hasResult ? "ROUND COMPLETE" : room?.status === "settling" ? "REVEALING…" : active ? "TIME TO GUESS" : "ROUND TIME"}</span><strong><DigitalCounter seconds={seconds} complete={hasResult} /></strong><div className="counter-progress"><i style={{ width: `${hasResult ? 100 : timerPercentage}%` }} /></div></div></div>
+          <div className="scene-wrapper"><GamePanorama src={sceneSrc} active={active} label={sceneLabel} /><div className={`round-counter ${active && seconds <= 5 ? "urgent" : ""}`}><span>{hasResult ? "ROUND COMPLETE" : room?.status === "settling" ? "REVEALING…" : active ? "TIME TO GUESS" : "ROUND TIME"}</span><strong><DigitalCounter seconds={seconds} complete={hasResult} /></strong><div className="counter-progress"><i style={{ width: `${hasResult ? 100 : timerPercentage}%` }} /></div></div></div>
           {sceneAttribution && <div className="image-credit">Street imagery by {sceneAttribution.author} · <a href={sceneAttribution.licenseUrl} target="_blank" rel="noreferrer">{sceneAttribution.license}</a></div>}<div className="map-header"><div><MapPin size={15} /><strong>{hasResult ? "The big reveal" : "So… where are we?"}</strong><span>{hasResult ? locationResult?.label || "The truth, and how close you got." : "Trust your gut. Drop your pin."}</span></div>{target ? <span className="map-legend"><i className="actual-dot" />Actual <i className="guess-dot" />You {result?.guesses.some((guess) => guess.wallet !== wallet) && <><i className="friend-dot" />Friend</>}</span> : <span className="map-stamp">WORLD MAP</span>}</div>
           <GameMap value={pin} onChange={(point) => { setPin(point); playTone(); }} disabled={!active || locked || seconds <= 0} pins={mapPins} />
-          {hasResult ? <div className="result-panel"><div className="result-medal"><Trophy size={28} /></div><div className="result-copy"><span>{result?.tie ? "A FRIENDLY DRAW" : won ? "ROUND WON" : "ROUND COMPLETE"}</span><h3>{result?.tie ? result.reason === "both_missed" ? "Nobody locked a guess." : "Great minds guess alike." : won ? "You take the pot!" : result?.reason === "timeout" ? "Your friend takes the pot." : "Your friend was closer."}</h3><p>{result?.signature ? `${lamportsToSol(result.winnerPayoutLamports)} test SOL ${result.tie ? "returned per player" : "paid to the winner"}.` : result?.receiptStatus === "unavailable" ? "Settled — receipt unavailable." : "Result recorded. Solana settlement is pending."}</p>{result?.signature && <a className="receipt-link" href={`https://explorer.solana.com/tx/${result.signature}?cluster=devnet`} target="_blank" rel="noreferrer">View payout receipt <ExternalLink size={12} /></a>}</div><button className="retro-button rematch-button" disabled={!!busy || (!!room && !terminal)} onClick={resetLobby}><RotateCcw size={15} />New duel</button></div> : <div className="guess-action"><div><span className={`guess-status-dot ${locked ? "locked-dot" : ""}`} /><span>{locked ? "Your guess is locked. Waiting for time’s up." : (seconds <= 0 && active) || room?.status === "settling" ? "Time’s up. Revealing the location…" : active ? pin ? "Pin placed. Make it your final answer." : "Look around, then click the map to guess." : waiting ? "Waiting for your friend to join…" : terminal ? "Stakes refunded. Create a fresh room when ready." : "Create a room or join your friend to start."}</span></div><button className="lock-button" disabled={!active || !pin || locked || !!busy || seconds <= 0} onClick={lockGuess}>{locked ? <Check size={16} /> : <LockKeyhole size={15} />}{locked ? "GUESS LOCKED" : "LOCK MY GUESS"}{!locked && <ArrowRight size={15} />}</button></div>}
+          {hasResult ? <div className="result-panel"><div className="result-medal"><Trophy size={28} /></div><div className="result-copy"><span>{result?.tie ? "A FRIENDLY DRAW" : won ? "ROUND WON" : "ROUND COMPLETE"}</span><h3>{result?.tie ? result.reason === "both_missed" ? "Nobody locked a guess." : "Great minds guess alike." : won ? "You take the pot!" : result?.reason === "timeout" ? "Your friend takes the pot." : "Your friend was closer."}</h3><p>{result?.signature ? `${lamportsToSol(result.winnerPayoutLamports)} test SOL ${result.tie ? "returned per player" : "paid to the winner"}.` : result?.receiptStatus === "unavailable" ? "Settled — receipt unavailable." : "Result recorded. Solana settlement is pending."}</p>{result?.signature && <a className="receipt-link" href={`https://explorer.solana.com/tx/${result.signature}?cluster=devnet`} target="_blank" rel="noreferrer">View payout receipt <ExternalLink size={12} /></a>}</div><button className="retro-button rematch-button" disabled={!!busy || (!!room && !terminal)} onClick={resetLobby}><RotateCcw size={15} />New duel</button></div> : <div className="guess-action"><div><span className={`guess-status-dot ${locked ? "locked-dot" : ""}`} /><span>{locked ? "Your guess is locked. Waiting for time’s up." : (seconds <= 0 && active) || room?.status === "settling" ? "Time’s up. Revealing the location…" : active ? pin ? "Pin placed. Make it your final answer." : "Look around, then click the map to guess." : waiting ? waitingHelp : terminal ? "Stakes refunded. Create a fresh room when ready." : "Create a room or join your friend to start."}</span></div><button className="lock-button" disabled={!active || !pin || locked || !!busy || seconds <= 0} onClick={lockGuess}>{locked ? <Check size={16} /> : <LockKeyhole size={15} />}{locked ? "GUESS LOCKED" : "LOCK MY GUESS"}{!locked && <ArrowRight size={15} />}</button></div>}
           {result && <div className="duel-distances"><div><span className="guess-dot" />You<strong>{distanceLabel(ownGuess?.distanceMeters)}</strong></div><div><span className="friend-dot" />Your friend<strong>{distanceLabel(result.guesses.find((guess) => guess.wallet !== wallet)?.distanceMeters)}</strong></div></div>}<div className="window-status"><span><span className="green-status" />{hasResult ? "Location revealed" : "Real street imagery · Panoramax"}</span><span>{hasResult && target ? `${(target.latE6 / 1e6).toFixed(4)}°, ${(target.lngE6 / 1e6).toFixed(4)}°` : "A whole world. One little pin."}</span></div>
         </WindowFrame>
       </div>

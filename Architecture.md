@@ -15,6 +15,7 @@ Two friends join a code-based room, deposit equal amounts of devnet SOL, view th
 | Escrow | `programs/geo-duels/`: native Solana program derives one escrow PDA per unique room, enforces exact equal deposits, freezes fixed deadlines and outcome, sends one atomic winner/tie/refund transfer, and prevents replay. |
 | Settlement | Dedicated devnet referee key signs start/result instructions and pays their transaction fees. The API retries safely; program timeout refunds are available to the recorded players without requiring the operator key. |
 | Public routing | `https://geopumpp.vercel.app/` proxies the game and API routes to the published Sites Worker. Vercel supplies the public address; it does not run a separate game database or referee. |
+| RPC relay | Vercel Node.js 22 serves `/api/rpc`, forwarding bounded, allowlisted requests to official Solana devnet. Both wallet and Worker RPC use this relay; signing remains with the wallet/referee. |
 | Hosting | `https://geo-duels-arcade.ddmpersonalworkspace.chatgpt.site` hosts the React/Vinext game, Worker APIs, D1 and private runtime secrets. `build/sites-worker.ts` handles requests and a once-per-minute settlement/recovery/rent sweep. |
 
 ## Money and lifecycle
@@ -50,13 +51,13 @@ The location target is committed before play and revealed with the result, but l
 
 ## Deployment and verification
 
-The executable devnet program is `9knNnYeDQh1suoAx6tmhAgtmsYQvcoguTn6CkssZArsU`; deployment evidence is in `chain/deployment.json`. The referee has been funded with 5 test SOL. The Worker uses a private Helius devnet RPC configuration; its credential remains a server secret and is not returned to browsers or committed.
+The executable devnet program is `9knNnYeDQh1suoAx6tmhAgtmsYQvcoguTn6CkssZArsU`; deployment evidence is in `chain/deployment.json`. The referee was funded with 5 test SOL. Both server and wallet use `https://geopumpp.vercel.app/api/rpc`, whose Vercel Node.js 22 function forwards to official devnet. Helius returned missing accounts intermittently; its key remains stored privately but inactive, with no automatic fallback wired.
 
 This sponsored deployment has a seven-day idle retention policy. Its sponsor holds upgrade authority `FEvT5nka9qBSXryv65P8ScjvGtfLUE7LgPu1rzuJ38h8`; the registered upgrade owner is a separate identity recorded in the deployment file. Retention and sponsor upgrades are additional devnet operational dependencies.
 
-Current evidence: 15 service tests, 7 native Rust tests, 4 client tests, and local-validator transaction checks. The earlier deployed-program API round **GYHZPJ passed**: two confirmed deposits, two signed guesses, a hidden target during play, and the exact **2,000,002-lamport** winner payout. `chain/devnet-game-receipt.json` records the checks and [confirmed payout](https://explorer.solana.com/tx/CyxbQPagrYKGwCZQYoz4auQeYYYvsUCL9qqmLLPzPVckCWTb8jB43kFSiurHrsNsV28dEgrKqkcF8ZpVnoVtZ94?cluster=devnet).
+Current evidence: **15 service, 4 client, 9 referee, 2 wallet, 10 relay and 7 Rust tests**. Public round **WG4UB2 passed**: both confirmed deposits, two signed guesses, hidden active target, authenticated panorama `200`, anonymous panorama `404`, and the exact **2,000,002-lamport** winner balance increase. `chain/devnet-game-receipt.json` records the [confirmed payout](https://explorer.solana.com/tx/bn3RyeAnpKaxfq1qV2DRULxRxPPbjwdZfncFBKFGjip27n8m8Z2UQa35hUZh1CRgFTiuG7rwD7PrTYYZcxHjTMb?cluster=devnet). Player room **TASTNV** also finalized its [0.002 SOL two-player payout](https://explorer.solana.com/tx/3R54WRH9XSXe2VnDfku3YBaDbtfaaKoaN9yG3E68Z5V73KEcDddTzbuthsmASfHR69B8mYw9p25X8jPGdQbPf144?cluster=devnet).
 
-The public Vercel route and Sites backend are deployed; `/api/config` reports `escrowReady: true`. Worker confirmations use HTTP polling and paced server RPC requests. The exact Vercel origin is trusted for proxy requests while other cross-origin mutations remain blocked. A full duel through the current public Vercel route is being verified; no final public-round receipt is claimed yet.
+The public Vercel route and Sites backend are deployed; `/api/config` reports `escrowReady: true`. Backend version 5 owns D1 and the minute cron. Worker confirmations use HTTP polling and paced server RPC requests; wallets sign transactions and broadcast through the configured game RPC. The exact Vercel origin is trusted for proxy requests while other cross-origin mutations remain blocked. The funded public flow is verified; final visual refinements are a separate publication step.
 
 ## Source map
 
