@@ -5,6 +5,7 @@ import { Connection, PublicKey } from "@solana/web3.js";
 import { ArrowRight, Check, ChevronRight, Copy, Globe2, HelpCircle, MapPin, Monitor, Radio, RotateCcw, ShieldCheck, Sparkles, Trophy, Users, Volume2, VolumeX, Wallet, X, ExternalLink, LoaderCircle, LockKeyhole, Clock3, Heart } from "lucide-react";
 import GameMap, { type Coordinates } from "./game-map";
 import GamePanorama from "./game-panorama";
+import SolValueEstimate from "./sol-value-estimate";
 import { installedWallets, lamportsToSol, sendDeposit, shortWallet, signText, solToLamports, type WalletProvider } from "@/lib/wallet";
 
 type Attribution = { author: string; license: string; licenseUrl: string };
@@ -363,6 +364,7 @@ export default function GameDesktop() {
                 <div className="room-code"><strong>{room.code}</strong><button title={room.status === "funding" ? "Confirm your stake before sharing the invite" : "Copy room invite"} aria-label="Copy room invite" disabled={room.status === "funding"} onClick={copyInvite}>{copied ? <Check size={18} /> : <Copy size={17} />}</button></div>
                 <p className="room-help">{roomHelp}</p>
                 <div className="pot-display"><span>IN THE POT</span><strong><span className="sol-icon" />{lamportsToSol(room.potLamports)} <small>SOL</small></strong><span>Test SOL · 0% house fee</span></div>
+                <SolValueEstimate stakeLamports={room.stakeLamports} potLamports={room.potLamports} />
                 {((room.status === "funding" || (room.status === "active" && !room.challenge) || (room.status === "waiting" && !room.sceneUrl))) && <button className="retro-button wide" onClick={async () => { setBusy("Restoring room access…"); try { await authenticate(room.code); } catch (cause) { setError(errorMessage(cause)); } finally { setBusy(""); } }} disabled={!!busy}>Restore room access</button>}
                 {room.status === "funding" && <button className="retro-button wide quiet" onClick={resetLobby} disabled={!!busy}>Back to lobby</button>}{waiting && room.status !== "funding" && room.creatorWallet === wallet && !room.opponentWallet && <button className="retro-button wide quiet" disabled={!!busy} onClick={() => cancelRoom()}>Cancel & refund stake</button>}
                 {(room.status === "refundable" || (!!room.refundAt && now >= room.refundAt && !terminal)) && <button className="retro-button wide" disabled={!!busy} onClick={() => cancelRoom(true)}>Recover expired stakes</button>}
@@ -370,6 +372,7 @@ export default function GameDesktop() {
               </div> : <>
                 <label className="stake-label" htmlFor="stake-amount">Your stake <span>TEST SOL</span></label>
                 <div className="stake-counter"><span className="sol-icon" /><input id="stake-amount" aria-label="Your stake in SOL" value={stake} onChange={(event) => setStake(event.target.value)} inputMode="decimal" autoComplete="off" /><span className="sol-unit">SOL</span><div className="stake-adjust"><button aria-label="Halve stake" onClick={() => adjustStake("half")}>½</button><button aria-label="Double stake" onClick={() => adjustStake("double")}>2×</button><button aria-label="Maximum stake leaving fee reserve" onClick={() => adjustStake("max")}>MAX</button></div></div>
+                <SolValueEstimate stakeSol={stake} />
                 <div className="stake-summary"><span>Winner’s pot</span><strong>{(() => { try { return lamportsToSol((BigInt(solToLamports(stake)) * BigInt(2)).toString()); } catch { return "—"; } })()} SOL <span>↗</span></strong></div>
                 <button className="primary-button wide" onClick={createRoom} disabled={!!busy || unavailable}><Users size={17} />{wallet ? "Create a room" : "Connect & create room"}<ArrowRight size={17} /></button>
                 {unavailable && <p className="service-notice">Room staking is temporarily unavailable. Please try again shortly.</p>}

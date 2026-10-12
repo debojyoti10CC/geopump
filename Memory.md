@@ -1,6 +1,6 @@
 # Geo Duels — Project Memory
 
-Last updated: 2026-10-12, Asia/Calcutta.
+Last updated: 2026-10-13, Asia/Calcutta.
 
 ## User decisions
 
@@ -10,6 +10,7 @@ Last updated: 2026-10-12, Asia/Calcutta.
 - Game only: remove practice and marketing header. Maps preserve 2:1 proportions, support drag after zoom/lock, and connect guesses to the target only after reveal.
 - Build the full product, delegate specialized work to agents, use real geolocations, proper payout math, and working user actions.
 - Initial chain: **Solana devnet with test SOL**.
+- Latest small follow-up: show a live USDC market reference beside the chosen SOL stake and pot, without changing deposited tokens or payout mathematics.
 - Publish at `https://github.com/debojyoti10CC/geopump.git`, branch `main`; initial commit message was `first commit`. Latest README request uses a centered geopump title/badges, actual product screenshot, game flow, architecture, setup, configuration, source map and evidence, inspired by the supplied Soleil structure without copying its assets/claims.
 
 ## Implemented design
@@ -37,6 +38,7 @@ Last updated: 2026-10-12, Asia/Calcutta.
 - Public site: `https://geopumpp.vercel.app/`, proxying UI/API/media to `https://geo-duels-arcade.ddmpersonalworkspace.chatgpt.site`; Vercel separately executes `/api/rpc`. Sites owns D1, encrypted scenes, referee and minute cron. GitHub source is published at `https://github.com/debojyoti10CC/geopump`.
 - Final visual/flow publication succeeded: Sites runtime version 6, deployment `appgdep_6acc478809cc8191b94a0e2560652962`, version ID `appgprj_6acae8e608888191ba6c512952ff57da~appgver_b091543f1744819186f75b6579a88f27`, environment revision 8, verified runtime source `66866d7ba317616de31bad54435b0decd8db770e`. A following docs-only Git commit may differ; do not equate current Git HEAD with this runtime source without checking.
 - Funded public two-wallet verification and final UI/flow publication are complete. Approved README screenshot `public/geopump-preview.jpg` shows the actual public game. Root is performing final live checks and pushing the documentation updates; do not claim that push finished before its confirmation.
+- USDC reference follow-up: client-only Coinbase SOL-USDC quote on mount and each 60-second refresh, bounded request timeout and unavailable fallback for failed/stale data. Caption identifies a test-SOL market reference; funds stay native SOL. This follow-up's new publication is pending. Preserve the version 6 record above as the last verified runtime until root confirms the new release. Existing test counts are unchanged.
 - Devnet referee/scene secrets are ignored under `.secrets/`/`.dev.vars`; do not copy secret values to source or logs.
 - The current Vercel site and its backing Sites Worker are public. Preserve existing access and secret boundaries during later changes.
 

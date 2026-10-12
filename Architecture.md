@@ -9,6 +9,7 @@ Two friends join a code-based room, deposit equal amounts of devnet SOL, view th
 | Layer | Implementation and responsibility |
 | --- | --- |
 | Browser | React/Vinext Windows 95 game-only UI; Phantom/Solflare signing; zoomable, draggable 2:1 world map; Pannellum panorama; countdown, manual rematch, and recovery. Connecting lines appear only with revealed results. |
+| Market reference | Client-only Coinbase SOL-USDC spot quote on mount and every 60 seconds, with timeout/error/stale fallback. Compact stake/pot estimates are labelled as a test-SOL market reference; they do not change escrow, money calculations or payout assets. |
 | Worker API | Room creation/join, wallet-signature sessions, accepted guess receipts, random supported-scene selection, result scoring, escrow reconciliation, and recovery. |
 | Durable state | Cloudflare D1 room/session/guess records; SQL migrations in `drizzle/`. Room terms and each room's program/referee addresses are pinned at creation. |
 | Scene vault | A small licensed Panoramax scene catalog is AES-GCM encrypted and gzip-compressed in source. `GEO_SCENE_SECRET` decrypts it only inside the server Worker. Active room responses do not disclose target coordinates, scene labels/source links, or the opponent's guess. |

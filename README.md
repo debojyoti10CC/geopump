@@ -16,6 +16,8 @@
 
 The game runs inside a Windows 95 desktop: teal background, navy title bars, beveled controls, a red countdown, and half / 2× / MAX stake shortcuts. The map supports zoom and mouse/touch dragging. Result lines connect both guesses to the revealed target. Rematches require an explicit action; there is no automatic staking.
 
+Stake and pot controls also show a compact USDC market reference using Coinbase SOL-USDC spot, refreshed every 60 seconds. Missing, failed or stale quotes show an unavailable estimate. This is a reference for test SOL: deposits and payouts remain SOL; no USDC is transferred or converted.
+
 **[Play geopump](https://geopumpp.vercel.app/)** · **[Source](https://github.com/debojyoti10CC/geopump)** · **[Rules](Rules.md)**
 
 ## Play a round
