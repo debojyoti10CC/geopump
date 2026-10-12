@@ -15,13 +15,15 @@
 - [x] Publish the project source to GitHub.
 - [x] Verify public round WG4UB2 end to end, including panorama authorization and exact winner balance; save its confirmed payout.
 - [x] Confirm player room TASTNV finalized its two-player 0.002 SOL payout.
-- [ ] Publish the final visual/flow refinements and approved README screenshot.
+- [x] Publish the final visual/flow refinements and approved README screenshot: Sites runtime version 6 deployed successfully with environment revision 8.
 
 Do not mark the end-to-end game complete from unit tests or a successful static build alone. Save the two-wallet chain receipts and deployed program/site references as completion evidence.
 
 Public round **WG4UB2** passed. `chain/devnet-game-receipt.json` records the exact **2,000,002-lamport** pot, two signed guesses, target privacy, panorama `200`/`404` boundaries and [confirmed payout](https://explorer.solana.com/tx/bn3RyeAnpKaxfq1qV2DRULxRxPPbjwdZfncFBKFGjip27n8m8Z2UQa35hUZh1CRgFTiuG7rwD7PrTYYZcxHjTMb?cluster=devnet). Production server and wallet use the Vercel Node.js 22 relay at `/api/rpc`, forwarding to official devnet. Helius is stored privately but inactive; automatic fallback is not implemented.
 
 The sponsored deployment has seven-day idle retention and sponsor-held upgrade authority; plan continued availability or replacement before relying on it beyond this prototype.
+
+Final runtime release evidence: deployment `appgdep_6acc478809cc8191b94a0e2560652962`, version `appgprj_6acae8e608888191ba6c512952ff57da~appgver_b091543f1744819186f75b6579a88f27`, runtime source `66866d7ba317616de31bad54435b0decd8db770e`. A later documentation-only Git commit may differ from this verified runtime source.
 
 ## Next phase — operational confidence
 
